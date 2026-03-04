@@ -1,0 +1,218 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import DashboardLayout from "@/components/DashboardLayout";
+import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check } from "lucide-react";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+
+const navItems = [
+  { title: "Marketplace", url: "/dashboard/buyer", icon: ShoppingCart },
+  { title: "My Orders", url: "/dashboard/buyer/orders", icon: ShoppingBag },
+];
+
+export default function BuyerMarketplace() {
+  const { user } = useAuth();
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [showOrders, setShowOrders] = useState(false);
+
+  const isOrdersPage = window.location.pathname.includes("/orders");
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  const fetchData = async () => {
+    if (!user) return;
+    const [{ data: inv }, { data: ord }] = await Promise.all([
+      supabase.from("inventory").select("*, profiles!inventory_farmer_id_fkey(full_name, location)").eq("is_available", true).gt("quantity", 0),
+      supabase.from("orders").select("*, order_items(*)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
+    ]);
+    setInventory(inv || []);
+    setOrders(ord || []);
+    setLoading(false);
+  };
+
+  const filteredInventory = inventory.filter((item) => {
+    const matchSearch = !search || item.product_name.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = !categoryFilter || item.category === categoryFilter;
+    const matchLocation = !locationFilter || (item.location || "").toLowerCase().includes(locationFilter.toLowerCase());
+    return matchSearch && matchCategory && matchLocation;
+  });
+
+  const addToCart = (itemId: string) => {
+    setCart(prev => ({ ...prev, [itemId]: (prev[itemId] || 0) + 1 }));
+    toast.success("Added to cart");
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCart(prev => {
+      const newCart = { ...prev };
+      delete newCart[itemId];
+      return newCart;
+    });
+  };
+
+  const cartItems = Object.entries(cart).map(([id, qty]) => {
+    const item = inventory.find(i => i.id === id);
+    return item ? { ...item, orderQty: qty } : null;
+  }).filter(Boolean);
+
+  const cartTotal = cartItems.reduce((s, i: any) => s + i.price_per_unit * i.orderQty, 0);
+
+  const placeOrder = async () => {
+    if (!user || cartItems.length === 0) return;
+    
+    // Group by farmer
+    const byFarmer: Record<string, any[]> = {};
+    cartItems.forEach((item: any) => {
+      if (!byFarmer[item.farmer_id]) byFarmer[item.farmer_id] = [];
+      byFarmer[item.farmer_id].push(item);
+    });
+
+    try {
+      for (const [farmerId, items] of Object.entries(byFarmer)) {
+        const total = items.reduce((s, i: any) => s + i.price_per_unit * i.orderQty, 0);
+        const { data: order, error } = await supabase.from("orders").insert({
+          buyer_id: user.id,
+          farmer_id: farmerId,
+          total_amount: total,
+          status: "pending",
+        } as any).select().single();
+        
+        if (error) throw error;
+
+        const orderItems = items.map((item: any) => ({
+          order_id: order.id,
+          inventory_id: item.id,
+          quantity: item.orderQty,
+          unit_price: item.price_per_unit,
+          total_price: item.price_per_unit * item.orderQty,
+        }));
+
+        await supabase.from("order_items").insert(orderItems as any);
+      }
+
+      toast.success("Order placed successfully!");
+      setCart({});
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to place order");
+    }
+  };
+
+  return (
+    <DashboardLayout navItems={navItems} title={isOrdersPage ? "My Orders" : "Marketplace"}>
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
+      ) : isOrdersPage ? (
+        <div className="space-y-4">
+          {orders.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">No orders yet. Browse the marketplace!</div>
+          ) : orders.map((order) => (
+            <div key={order.id} className="bg-card border border-border rounded-xl p-5 shadow-card">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-display font-semibold text-foreground">{order.order_number}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{new Date(order.created_at).toLocaleDateString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display font-bold text-foreground">TZS {order.total_amount.toLocaleString()}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full capitalize mt-1 inline-block ${
+                    order.status === "delivered" ? "bg-emerald/10 text-emerald" :
+                    order.status === "cancelled" ? "bg-destructive/10 text-destructive" :
+                    "bg-amber-100 text-amber-700"
+                  }`}>{order.status.replace("_", " ")}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Search & Filters */}
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
+                className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
+            </div>
+            <div className="flex gap-3">
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
+                className="bg-card border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none">
+                <option value="">All Categories</option>
+                <option value="chicken">Chicken</option><option value="eggs">Eggs</option><option value="meat">Meat</option><option value="other">Other</option>
+              </select>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input value={locationFilter} onChange={e => setLocationFilter(e.target.value)} placeholder="Location..."
+                  className="bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm w-40 focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Cart Summary */}
+          {Object.keys(cart).length > 0 && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-emerald/10 border border-emerald/30 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+              <div>
+                <p className="font-display font-semibold text-foreground">Cart: {cartItems.length} items</p>
+                <p className="text-sm text-muted-foreground">Total: TZS {cartTotal.toLocaleString()}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setCart({})} className="bg-muted text-foreground px-4 py-2 rounded-lg text-sm font-medium">Clear</button>
+                <button onClick={placeOrder} className="bg-emerald text-accent-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-light transition-colors flex items-center gap-2">
+                  <Check className="w-4 h-4" /> Place Order
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Products Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredInventory.length === 0 ? (
+              <div className="col-span-full text-center py-16 text-muted-foreground">No products found</div>
+            ) : filteredInventory.map((item) => (
+              <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="bg-card border border-border rounded-xl p-5 shadow-card hover:shadow-elevated transition-all">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-display font-semibold text-foreground">{item.product_name}</h3>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" /> {item.location || "Unknown"} · <Package className="w-3 h-3" /> {(item.profiles as any)?.full_name || "Farmer"}
+                    </p>
+                  </div>
+                  <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span>
+                </div>
+                {item.description && <p className="text-xs text-muted-foreground mb-3">{item.description}</p>}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-display font-bold text-emerald">TZS {item.price_per_unit.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{item.quantity} {item.unit} available</p>
+                  </div>
+                  {cart[item.id] ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded-lg">{cart[item.id]} in cart</span>
+                      <button onClick={() => removeFromCart(item.id)} className="text-xs text-destructive hover:underline">Remove</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => addToCart(item.id)}
+                      className="bg-emerald text-accent-foreground px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-light transition-colors">
+                      Add to Cart
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
+  );
+}

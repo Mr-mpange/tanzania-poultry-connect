@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Leaf, ShieldCheck, Smartphone, BarChart3, Truck, Users, Bell, CreditCard, Zap, ChevronRight, Mail, Phone, MapPin, Check } from "lucide-react";
 import { PhoneSimulator } from "@/components/PhoneSimulator";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const fadeUp = {
   initial: { opacity: 0, y: 30 },
@@ -12,6 +13,7 @@ const fadeUp = {
 
 /* ─── Hero ─── */
 function HeroSection() {
+  const navigate = useNavigate();
   return (
     <section className="relative bg-hero min-h-screen flex items-center overflow-hidden">
       {/* Decorative elements */}
@@ -47,6 +49,7 @@ function HeroSection() {
               ].map((cta) => (
                 <motion.button
                   key={cta.label}
+                  onClick={() => navigate("/auth")}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   className="flex items-center gap-2 bg-emerald text-accent-foreground px-5 py-3 rounded-xl font-display font-semibold text-sm hover:bg-emerald-light transition-colors shadow-glow"
@@ -348,6 +351,7 @@ function Footer() {
 
 /* ─── Navbar ─── */
 function Navbar() {
+  const navigate = useNavigate();
   return (
     <motion.nav initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}
       className="fixed top-0 left-0 right-0 z-50 bg-navy-dark/80 backdrop-blur-xl border-b border-primary-foreground/5">
@@ -366,7 +370,7 @@ function Navbar() {
             </a>
           ))}
         </div>
-        <button className="bg-emerald text-accent-foreground px-4 py-2 rounded-lg font-display font-semibold text-sm hover:bg-emerald-light transition-colors">
+        <button onClick={() => navigate("/auth")} className="bg-emerald text-accent-foreground px-4 py-2 rounded-lg font-display font-semibold text-sm hover:bg-emerald-light transition-colors">
           Get Started
         </button>
       </div>
