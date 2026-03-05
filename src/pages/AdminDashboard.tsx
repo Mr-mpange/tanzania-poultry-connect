@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const navItems = [
   { title: "Overview", url: "/dashboard/admin", icon: BarChart3 },
@@ -27,10 +27,13 @@ function StatCard({ label, value, icon: Icon, color, trend }: { label: string; v
   );
 }
 
+const CHART_COLORS = ["hsl(160,50%,45%)", "hsl(220,60%,50%)", "hsl(40,90%,55%)", "hsl(280,60%,55%)", "hsl(0,70%,55%)"];
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, farmers: 0, buyers: 0, distributors: 0, orders: 0, totalRevenue: 0, deliveries: 0, inventory: 0 });
   const [users, setUsers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isUsersPage = window.location.pathname.includes("/users");
@@ -58,15 +61,49 @@ export default function AdminDashboard() {
       inventory: (inv || []).length,
     });
 
-    // Combine profiles with roles
     const usersWithRoles = (profiles || []).map(p => ({
       ...p,
       role: rolesList.find(r => r.user_id === p.user_id)?.role || "unknown",
     }));
     setUsers(usersWithRoles);
     setOrders(allOrders || []);
+    setInventory(inv || []);
     setLoading(false);
   };
+
+  // --- Chart Data ---
+  const revenueByMonth = useMemo(() => {
+    const map: Record<string, number> = {};
+    orders.forEach(o => {
+      const m = new Date(o.created_at).toLocaleDateString("en", { month: "short", year: "2-digit" });
+      map[m] = (map[m] || 0) + (o.total_amount || 0);
+    });
+    return Object.entries(map).slice(-6).map(([month, revenue]) => ({ month, revenue }));
+  }, [orders]);
+
+  const ordersByStatus = useMemo(() => {
+    const map: Record<string, number> = {};
+    orders.forEach(o => { map[o.status] = (map[o.status] || 0) + 1; });
+    return Object.entries(map).map(([name, value]) => ({ name: name.replace("_", " "), value }));
+  }, [orders]);
+
+  const topFarmers = useMemo(() => {
+    const map: Record<string, number> = {};
+    orders.forEach(o => { map[o.farmer_id] = (map[o.farmer_id] || 0) + (o.total_amount || 0); });
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, revenue], i) => {
+        const profile = users.find(u => u.user_id === id);
+        return { name: profile?.full_name || `Farmer ${i + 1}`, revenue };
+      });
+  }, [orders, users]);
+
+  const supplyChain = useMemo(() => {
+    const categories: Record<string, number> = {};
+    inventory.forEach(item => { categories[item.category] = (categories[item.category] || 0) + item.quantity; });
+    return Object.entries(categories).map(([name, qty]) => ({ name, qty }));
+  }, [inventory]);
 
   return (
     <DashboardLayout navItems={navItems} title="Admin Dashboard">
@@ -134,6 +171,7 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* KPI Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Total Users" value={stats.users} icon={Users} color="bg-blue-100 text-blue-600" />
             <StatCard label="Total Orders" value={stats.orders} icon={ShoppingCart} color="bg-emerald/10 text-emerald" />
@@ -147,6 +185,86 @@ export default function AdminDashboard() {
             <StatCard label="Distributors" value={stats.distributors} icon={Truck} color="bg-amber-100 text-amber-600" />
           </div>
 
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Trends */}
+            <div className="bg-card border border-border rounded-xl p-6 shadow-card">
+              <h3 className="font-display font-semibold text-foreground mb-4">Revenue Trends</h3>
+              {revenueByMonth.length === 0 ? (
+                <p className="text-muted-foreground text-sm py-8 text-center">No revenue data yet.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={revenueByMonth}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,15%,90%)" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(220,15%,46%)" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "hsl(220,15%,46%)" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: number) => [`TZS ${v.toLocaleString()}`, "Revenue"]}
+                      contentStyle={{ background: "hsl(0,0%,100%)", border: "1px solid hsl(220,15%,90%)", borderRadius: 8, fontSize: 12 }} />
+                    <Line type="monotone" dataKey="revenue" stroke="hsl(160,50%,45%)" strokeWidth={2.5} dot={{ fill: "hsl(160,50%,45%)", r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Order Status Distribution */}
+            <div className="bg-card border border-border rounded-xl p-6 shadow-card">
+              <h3 className="font-display font-semibold text-foreground mb-4">Order Status</h3>
+              {ordersByStatus.length === 0 ? (
+                <p className="text-muted-foreground text-sm py-8 text-center">No orders yet.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie data={ordersByStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false} fontSize={11}>
+                      {ordersByStatus.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: "hsl(0,0%,100%)", border: "1px solid hsl(220,15%,90%)", borderRadius: 8, fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Top Farmers by Revenue */}
+            <div className="bg-card border border-border rounded-xl p-6 shadow-card">
+              <h3 className="font-display font-semibold text-foreground mb-4">Top Farmers</h3>
+              {topFarmers.length === 0 ? (
+                <p className="text-muted-foreground text-sm py-8 text-center">No farmer data yet.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={topFarmers} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,15%,90%)" />
+                    <XAxis type="number" tick={{ fontSize: 12, fill: "hsl(220,15%,46%)" }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(220,15%,46%)" }} width={100} />
+                    <Tooltip formatter={(v: number) => [`TZS ${v.toLocaleString()}`, "Revenue"]}
+                      contentStyle={{ background: "hsl(0,0%,100%)", border: "1px solid hsl(220,15%,90%)", borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="revenue" fill="hsl(220,60%,50%)" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Supply Chain - Inventory by Category */}
+            <div className="bg-card border border-border rounded-xl p-6 shadow-card">
+              <h3 className="font-display font-semibold text-foreground mb-4">Supply Chain Flow</h3>
+              {supplyChain.length === 0 ? (
+                <p className="text-muted-foreground text-sm py-8 text-center">No inventory data yet.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={supplyChain}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,15%,90%)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: "hsl(220,15%,46%)" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "hsl(220,15%,46%)" }} />
+                    <Tooltip contentStyle={{ background: "hsl(0,0%,100%)", border: "1px solid hsl(220,15%,90%)", borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="qty" fill="hsl(160,50%,45%)" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Orders */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-card">
             <h3 className="font-display font-semibold text-foreground mb-4">Recent Orders</h3>
             {orders.length === 0 ? (
