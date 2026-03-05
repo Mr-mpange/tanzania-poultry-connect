@@ -18,6 +18,11 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function NotificationListener() {
+  useOrderNotifications();
+  return null;
+}
+
 function DashboardRedirect() {
   const { role, loading } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="w-8 h-8 border-4 border-emerald border-t-transparent rounded-full animate-spin" /></div>;
