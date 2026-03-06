@@ -1,12 +1,13 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useRef, useEffect } from "react";
 import { NavLink as RouterNavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 import { motion } from "framer-motion";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar
 } from "@/components/ui/sidebar";
-import { Leaf, LogOut, User } from "lucide-react";
+import { Leaf, LogOut, User, Bell } from "lucide-react";
 
 interface NavItem {
   title: string;
@@ -20,6 +21,58 @@ interface DashboardLayoutProps {
   title: string;
 }
 
+function NotificationBell() {
+  const { notifications, unreadCount, markRead, markAllRead } = useNotificationContext();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen(!open)} className="relative p-2 rounded-lg hover:bg-muted transition-colors">
+        <Bell className="w-5 h-5 text-muted-foreground" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border rounded-xl shadow-elevated z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <span className="font-display font-semibold text-sm text-foreground">Notifications</span>
+            {unreadCount > 0 && (
+              <button onClick={markAllRead} className="text-xs text-secondary hover:underline">Mark all read</button>
+            )}
+          </div>
+          <div className="max-h-72 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-4 text-center">No notifications yet</p>
+            ) : (
+              notifications.slice(0, 20).map(n => (
+                <button key={n.id} onClick={() => markRead(n.id)}
+                  className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 transition-colors ${!n.read ? "bg-secondary/5" : ""}`}>
+                  <p className={`text-sm ${!n.read ? "font-medium text-foreground" : "text-muted-foreground"}`}>{n.message}</p>
+                  {n.detail && <p className="text-xs text-muted-foreground">{n.detail}</p>}
+                  <p className="text-[10px] text-muted-foreground mt-1">{n.timestamp.toLocaleTimeString()}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppSidebar({ navItems, title }: { navItems: NavItem[]; title: string }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -30,8 +83,8 @@ function AppSidebar({ navItems, title }: { navItems: NavItem[]; title: string })
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarContent className="bg-sidebar">
         <div className="p-4 flex items-center gap-2">
-          <div className="w-8 h-8 bg-emerald rounded-lg flex items-center justify-center flex-shrink-0">
-            <Leaf className="w-4 h-4 text-accent-foreground" />
+          <div className="w-8 h-8 bg-secondary rounded-lg flex items-center justify-center flex-shrink-0">
+            <Leaf className="w-4 h-4 text-secondary-foreground" />
           </div>
           {!collapsed && <span className="font-display font-bold text-sidebar-foreground text-sm">{title}</span>}
         </div>
@@ -85,7 +138,8 @@ export default function DashboardLayout({ children, navItems, title }: Dashboard
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 flex items-center border-b border-border px-4 bg-card">
             <SidebarTrigger className="mr-4" />
-            <h1 className="font-display font-semibold text-foreground text-lg">{title}</h1>
+            <h1 className="font-display font-semibold text-foreground text-lg flex-1">{title}</h1>
+            <NotificationBell />
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
