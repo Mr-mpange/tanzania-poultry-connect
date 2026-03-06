@@ -100,7 +100,7 @@ export default function FarmerDashboard() {
   };
 
   const handleOrderAction = async (orderId: string, newStatus: string) => {
-    const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
+    const { error } = await supabase.from("orders").update({ status: newStatus as any }).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
     toast.success(`Order ${newStatus.replace("_", " ")}`);
     fetchData();
