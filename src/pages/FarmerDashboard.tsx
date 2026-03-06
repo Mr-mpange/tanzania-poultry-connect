@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -26,6 +26,14 @@ function KPICard({ label, value, icon: Icon, color }: { label: string; value: st
     </div>
   );
 }
+
+const isOrdersPage = () => window.location.pathname.includes("/orders");
+
+const ORDER_ACTIONS: Record<string, { next: string; label: string; icon: React.ElementType; color: string }> = {
+  pending: { next: "confirmed", label: "Confirm", icon: CheckCircle, color: "text-secondary hover:bg-secondary/10" },
+  confirmed: { next: "processing", label: "Process", icon: Truck, color: "text-blue-600 hover:bg-blue-50" },
+  processing: { next: "picked_up", label: "Ready for Pickup", icon: Package, color: "text-amber-600 hover:bg-amber-50" },
+};
 
 export default function FarmerDashboard() {
   const { user } = useAuth();
@@ -91,144 +99,200 @@ export default function FarmerDashboard() {
     setShowForm(true);
   };
 
+  const handleOrderAction = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Order ${newStatus.replace("_", " ")}`);
+    fetchData();
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", orderId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Order cancelled");
+    fetchData();
+  };
+
   const totalStock = inventory.reduce((s, i) => s + i.quantity, 0);
   const totalValue = inventory.reduce((s, i) => s + i.quantity * i.price_per_unit, 0);
 
-  return (
-    <DashboardLayout navItems={navItems} title="Farmer Dashboard">
-      {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
-      ) : (
+  if (loading) {
+    return (
+      <DashboardLayout navItems={navItems} title="Farmer Dashboard">
+        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>
+      </DashboardLayout>
+    );
+  }
+
+  if (isOrdersPage()) {
+    return (
+      <DashboardLayout navItems={navItems} title="Farmer Dashboard">
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KPICard label="Total Products" value={inventory.length} icon={Package} color="bg-emerald/10 text-emerald" />
-            <KPICard label="Total Stock" value={totalStock.toLocaleString()} icon={Egg} color="bg-blue-100 text-blue-600" />
-            <KPICard label="Inventory Value" value={`TZS ${totalValue.toLocaleString()}`} icon={TrendingUp} color="bg-amber-100 text-amber-600" />
-            <KPICard label="Pending Orders" value={orders.filter(o => o.status === "pending").length} icon={ShoppingCart} color="bg-purple-100 text-purple-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <KPICard label="Total Orders" value={orders.length} icon={ShoppingCart} color="bg-secondary/10 text-secondary" />
+            <KPICard label="Pending" value={orders.filter(o => o.status === "pending").length} icon={Package} color="bg-amber-100 text-amber-600" />
+            <KPICard label="Delivered" value={orders.filter(o => o.status === "delivered").length} icon={CheckCircle} color="bg-blue-100 text-blue-600" />
           </div>
 
-          <div className="flex items-center justify-between">
-            <h2 className="font-display font-semibold text-lg text-foreground">My Inventory</h2>
-            <button onClick={() => { setEditItem(null); setShowForm(true); setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 }); }}
-              className="flex items-center gap-2 bg-emerald text-accent-foreground px-4 py-2 rounded-lg font-medium text-sm hover:bg-emerald-light transition-colors">
-              <Plus className="w-4 h-4" /> Add Product
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showForm && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                className="bg-card border border-border rounded-xl p-6 shadow-card">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-display font-semibold">{editItem ? "Edit Product" : "Add Product"}</h3>
-                  <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
-                </div>
-                <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <input placeholder="Product Name" value={form.product_name} onChange={e => setForm(f => ({ ...f, product_name: e.target.value }))} required
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as "chicken" | "eggs" | "meat" | "other" }))}
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none">
-                    <option value="chicken">Chicken</option><option value="eggs">Eggs</option><option value="meat">Meat</option><option value="other">Other</option>
-                  </select>
-                  <input type="number" placeholder="Quantity" value={form.quantity || ""} onChange={e => setForm(f => ({ ...f, quantity: +e.target.value }))} required
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <input placeholder="Unit (pieces, kg, trays)" value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <input type="number" placeholder="Price per unit (TZS)" value={form.price_per_unit || ""} onChange={e => setForm(f => ({ ...f, price_per_unit: +e.target.value }))} required
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <input placeholder="Location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <input placeholder="Health Status" value={form.health_status} onChange={e => setForm(f => ({ ...f, health_status: e.target.value }))}
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <input placeholder="Vaccination Status" value={form.vaccination_status} onChange={e => setForm(f => ({ ...f, vaccination_status: e.target.value }))}
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <input type="number" step="0.1" placeholder="Weight (kg)" value={form.weight_kg || ""} onChange={e => setForm(f => ({ ...f, weight_kg: +e.target.value }))}
-                    className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <textarea placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2}
-                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none resize-none" />
-                  </div>
-                  <button type="submit" className="bg-emerald text-accent-foreground px-4 py-2 rounded-lg font-medium text-sm hover:bg-emerald-light transition-colors">
-                    {editItem ? "Update" : "Save"}
-                  </button>
-                </form>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
+          <h2 className="font-display font-semibold text-lg text-foreground">Manage Orders</h2>
           <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Qty</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Price</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Location</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Order #</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Amount</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {inventory.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">No inventory items yet. Add your first product!</td></tr>
-                  ) : inventory.map((item) => (
-                    <tr key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                      <td className="p-3 font-medium text-foreground">{item.product_name}</td>
-                      <td className="p-3"><span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span></td>
-                      <td className="p-3 text-foreground">{item.quantity} {item.unit}</td>
-                      <td className="p-3 text-foreground">TZS {item.price_per_unit.toLocaleString()}</td>
-                      <td className="p-3 text-muted-foreground">{item.location || "-"}</td>
-                      <td className="p-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.is_available ? "bg-emerald/10 text-emerald" : "bg-destructive/10 text-destructive"}`}>
-                          {item.is_available ? "Available" : "Out of Stock"}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex gap-1">
-                          <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></button>
-                          <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"><Trash2 className="w-3.5 h-3.5 text-destructive" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {orders.length === 0 ? (
+                    <tr><td colSpan={5} className="text-center p-8 text-muted-foreground">No orders yet.</td></tr>
+                  ) : orders.map((o) => {
+                    const action = ORDER_ACTIONS[o.status];
+                    return (
+                      <tr key={o.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                        <td className="p-3 font-medium text-foreground">{o.order_number}</td>
+                        <td className="p-3 text-foreground">TZS {o.total_amount.toLocaleString()}</td>
+                        <td className="p-3">
+                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                            o.status === "delivered" ? "bg-secondary/10 text-secondary" :
+                            o.status === "cancelled" ? "bg-destructive/10 text-destructive" :
+                            "bg-amber-100 text-amber-700"
+                          }`}>{o.status.replace("_", " ")}</span>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1">
+                            {action && (
+                              <button onClick={() => handleOrderAction(o.id, action.next)} title={action.label}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${action.color}`}>
+                                <action.icon className="w-3.5 h-3.5" /> {action.label}
+                              </button>
+                            )}
+                            {["pending", "confirmed"].includes(o.status) && (
+                              <button onClick={() => handleCancelOrder(o.id)} title="Cancel"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors">
+                                <XCircle className="w-3.5 h-3.5" /> Cancel
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
-
-          {orders.length > 0 && (
-            <>
-              <h2 className="font-display font-semibold text-lg text-foreground">Recent Orders</h2>
-              <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="text-left p-3 font-medium text-muted-foreground">Order #</th>
-                        <th className="text-left p-3 font-medium text-muted-foreground">Amount</th>
-                        <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                        <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o) => (
-                        <tr key={o.id} className="border-b border-border">
-                          <td className="p-3 font-medium text-foreground">{o.order_number}</td>
-                          <td className="p-3 text-foreground">TZS {o.total_amount.toLocaleString()}</td>
-                          <td className="p-3"><span className="text-xs bg-emerald/10 text-emerald px-2 py-0.5 rounded-full capitalize">{o.status}</span></td>
-                          <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          )}
         </div>
-      )}
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout navItems={navItems} title="Farmer Dashboard">
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard label="Total Products" value={inventory.length} icon={Package} color="bg-secondary/10 text-secondary" />
+          <KPICard label="Total Stock" value={totalStock.toLocaleString()} icon={Egg} color="bg-blue-100 text-blue-600" />
+          <KPICard label="Inventory Value" value={`TZS ${totalValue.toLocaleString()}`} icon={TrendingUp} color="bg-amber-100 text-amber-600" />
+          <KPICard label="Pending Orders" value={orders.filter(o => o.status === "pending").length} icon={ShoppingCart} color="bg-purple-100 text-purple-600" />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <h2 className="font-display font-semibold text-lg text-foreground">My Inventory</h2>
+          <button onClick={() => { setEditItem(null); setShowForm(true); setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 }); }}
+            className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
+            <Plus className="w-4 h-4" /> Add Product
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {showForm && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              className="bg-card border border-border rounded-xl p-6 shadow-card">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-display font-semibold">{editItem ? "Edit Product" : "Add Product"}</h3>
+                <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
+              </div>
+              <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <input placeholder="Product Name" value={form.product_name} onChange={e => setForm(f => ({ ...f, product_name: e.target.value }))} required
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as any }))}
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none">
+                  <option value="chicken">Chicken</option><option value="eggs">Eggs</option><option value="meat">Meat</option><option value="other">Other</option>
+                </select>
+                <input type="number" placeholder="Quantity" value={form.quantity || ""} onChange={e => setForm(f => ({ ...f, quantity: +e.target.value }))} required
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <input placeholder="Unit (pieces, kg, trays)" value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <input type="number" placeholder="Price per unit (TZS)" value={form.price_per_unit || ""} onChange={e => setForm(f => ({ ...f, price_per_unit: +e.target.value }))} required
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <input placeholder="Location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <input placeholder="Health Status" value={form.health_status} onChange={e => setForm(f => ({ ...f, health_status: e.target.value }))}
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <input placeholder="Vaccination Status" value={form.vaccination_status} onChange={e => setForm(f => ({ ...f, vaccination_status: e.target.value }))}
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <input type="number" step="0.1" placeholder="Weight (kg)" value={form.weight_kg || ""} onChange={e => setForm(f => ({ ...f, weight_kg: +e.target.value }))}
+                  className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+                <div className="md:col-span-2 lg:col-span-3">
+                  <textarea placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2}
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none resize-none" />
+                </div>
+                <button type="submit" className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
+                  {editItem ? "Update" : "Save"}
+                </button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Qty</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Price</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Location</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventory.length === 0 ? (
+                  <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">No inventory items yet. Add your first product!</td></tr>
+                ) : inventory.map((item) => (
+                  <tr key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="p-3 font-medium text-foreground">{item.product_name}</td>
+                    <td className="p-3"><span className="bg-secondary/10 text-secondary text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span></td>
+                    <td className="p-3 text-foreground">{item.quantity} {item.unit}</td>
+                    <td className="p-3 text-foreground">TZS {item.price_per_unit.toLocaleString()}</td>
+                    <td className="p-3 text-muted-foreground">{item.location || "-"}</td>
+                    <td className="p-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${item.is_available ? "bg-secondary/10 text-secondary" : "bg-destructive/10 text-destructive"}`}>
+                        {item.is_available ? "Available" : "Out of Stock"}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex gap-1">
+                        <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></button>
+                        <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"><Trash2 className="w-3.5 h-3.5 text-destructive" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </DashboardLayout>
   );
 }

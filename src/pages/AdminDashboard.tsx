@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X } from "lucide-react";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
+import { toast } from "sonner";
 
 const navItems = [
   { title: "Overview", url: "/dashboard/admin", icon: BarChart3 },
@@ -29,12 +30,54 @@ function StatCard({ label, value, icon: Icon, color, trend }: { label: string; v
 
 const CHART_COLORS = ["hsl(160,50%,45%)", "hsl(220,60%,50%)", "hsl(40,90%,55%)", "hsl(280,60%,55%)", "hsl(0,70%,55%)"];
 
+function EditUserModal({ user, onClose, onSaved }: { user: any; onClose: () => void; onSaved: () => void }) {
+  const [fullName, setFullName] = useState(user.full_name || "");
+  const [phone, setPhone] = useState(user.phone || "");
+  const [location, setLocation] = useState(user.location || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase.from("profiles").update({ full_name: fullName, phone, location }).eq("user_id", user.user_id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("User updated");
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-foreground/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md shadow-elevated" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-display font-semibold text-foreground">Edit User</h3>
+          <button onClick={onClose}><X className="w-5 h-5 text-muted-foreground" /></button>
+        </div>
+        <form onSubmit={handleSave} className="space-y-3">
+          <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" required
+            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone"
+            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+          <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location"
+            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none" />
+          <button type="submit" disabled={saving}
+            className="w-full bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, farmers: 0, buyers: 0, distributors: 0, orders: 0, totalRevenue: 0, deliveries: 0, inventory: 0 });
   const [users, setUsers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<any>(null);
 
   const isUsersPage = window.location.pathname.includes("/users");
   const isOrdersPage = window.location.pathname.includes("/orders") && window.location.pathname.includes("/admin");
@@ -69,6 +112,22 @@ export default function AdminDashboard() {
     setOrders(allOrders || []);
     setInventory(inv || []);
     setLoading(false);
+  };
+
+  const handleApprove = async (userId: string, approve: boolean) => {
+    const { error } = await supabase.from("profiles").update({ is_approved: approve }).eq("user_id", userId);
+    if (error) { toast.error(error.message); return; }
+    toast.success(approve ? "User approved" : "User rejected");
+    fetchAll();
+  };
+
+  const handleDelete = async (userId: string, userName: string) => {
+    if (!confirm(`Delete user "${userName}"? This cannot be undone.`)) return;
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+    const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("User deleted");
+    fetchAll();
   };
 
   // --- Chart Data ---
@@ -119,25 +178,62 @@ export default function AdminDashboard() {
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Role</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Phone</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Location</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Approved</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Joined</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id} className="border-b border-border hover:bg-muted/30">
                       <td className="p-3 font-medium text-foreground">{u.full_name || "—"}</td>
-                      <td className="p-3"><span className="text-xs bg-emerald/10 text-emerald px-2 py-0.5 rounded-full capitalize">{u.role}</span></td>
+                      <td className="p-3"><span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full capitalize">{u.role}</span></td>
+                      <td className="p-3 text-muted-foreground">{u.phone || "—"}</td>
                       <td className="p-3 text-muted-foreground">{u.location || "—"}</td>
-                      <td className="p-3">{u.is_approved ? <CheckCircle className="w-4 h-4 text-emerald" /> : <XCircle className="w-4 h-4 text-destructive" />}</td>
+                      <td className="p-3">
+                        {u.is_approved ? (
+                          <span className="inline-flex items-center gap-1 text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">
+                            <CheckCircle className="w-3 h-3" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">
+                            <XCircle className="w-3 h-3" /> Inactive
+                          </span>
+                        )}
+                      </td>
                       <td className="p-3 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1">
+                          {!u.is_approved ? (
+                            <button onClick={() => handleApprove(u.user_id, true)} title="Approve"
+                              className="p-1.5 rounded-lg hover:bg-secondary/10 transition-colors">
+                              <ShieldCheck className="w-4 h-4 text-secondary" />
+                            </button>
+                          ) : (
+                            <button onClick={() => handleApprove(u.user_id, false)} title="Deactivate"
+                              className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
+                              <ShieldX className="w-4 h-4 text-destructive" />
+                            </button>
+                          )}
+                          <button onClick={() => setEditingUser(u)} title="Edit"
+                            className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                          <button onClick={() => handleDelete(u.user_id, u.full_name)} title="Delete"
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
+          {editingUser && <EditUserModal user={editingUser} onClose={() => setEditingUser(null)} onSaved={fetchAll} />}
         </div>
       ) : isOrdersPage ? (
         <div className="space-y-4">
@@ -159,7 +255,7 @@ export default function AdminDashboard() {
                       <td className="p-3 font-medium text-foreground">{o.order_number}</td>
                       <td className="p-3 text-foreground">TZS {o.total_amount.toLocaleString()}</td>
                       <td className="p-3"><span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                        o.status === "delivered" ? "bg-emerald/10 text-emerald" : o.status === "cancelled" ? "bg-destructive/10 text-destructive" : "bg-amber-100 text-amber-700"
+                        o.status === "delivered" ? "bg-secondary/10 text-secondary" : o.status === "cancelled" ? "bg-destructive/10 text-destructive" : "bg-amber-100 text-amber-700"
                       }`}>{o.status.replace("_", " ")}</span></td>
                       <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
                     </tr>
@@ -171,23 +267,20 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* KPI Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Total Users" value={stats.users} icon={Users} color="bg-blue-100 text-blue-600" />
-            <StatCard label="Total Orders" value={stats.orders} icon={ShoppingCart} color="bg-emerald/10 text-emerald" />
+            <StatCard label="Total Orders" value={stats.orders} icon={ShoppingCart} color="bg-secondary/10 text-secondary" />
             <StatCard label="Revenue" value={`TZS ${stats.totalRevenue.toLocaleString()}`} icon={TrendingUp} color="bg-amber-100 text-amber-600" />
             <StatCard label="Products Listed" value={stats.inventory} icon={Package} color="bg-purple-100 text-purple-600" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard label="Farmers" value={stats.farmers} icon={Package} color="bg-emerald/10 text-emerald" />
+            <StatCard label="Farmers" value={stats.farmers} icon={Package} color="bg-secondary/10 text-secondary" />
             <StatCard label="Buyers" value={stats.buyers} icon={ShoppingCart} color="bg-blue-100 text-blue-600" />
             <StatCard label="Distributors" value={stats.distributors} icon={Truck} color="bg-amber-100 text-amber-600" />
           </div>
 
-          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Trends */}
             <div className="bg-card border border-border rounded-xl p-6 shadow-card">
               <h3 className="font-display font-semibold text-foreground mb-4">Revenue Trends</h3>
               {revenueByMonth.length === 0 ? (
@@ -206,7 +299,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Order Status Distribution */}
             <div className="bg-card border border-border rounded-xl p-6 shadow-card">
               <h3 className="font-display font-semibold text-foreground mb-4">Order Status</h3>
               {ordersByStatus.length === 0 ? (
@@ -216,9 +308,7 @@ export default function AdminDashboard() {
                   <PieChart>
                     <Pie data={ordersByStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       labelLine={false} fontSize={11}>
-                      {ordersByStatus.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
+                      {ordersByStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={{ background: "hsl(0,0%,100%)", border: "1px solid hsl(220,15%,90%)", borderRadius: 8, fontSize: 12 }} />
                   </PieChart>
@@ -226,7 +316,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Top Farmers by Revenue */}
             <div className="bg-card border border-border rounded-xl p-6 shadow-card">
               <h3 className="font-display font-semibold text-foreground mb-4">Top Farmers</h3>
               {topFarmers.length === 0 ? (
@@ -245,7 +334,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Supply Chain - Inventory by Category */}
             <div className="bg-card border border-border rounded-xl p-6 shadow-card">
               <h3 className="font-display font-semibold text-foreground mb-4">Supply Chain Flow</h3>
               {supplyChain.length === 0 ? (
@@ -264,7 +352,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent Orders */}
           <div className="bg-card border border-border rounded-xl p-6 shadow-card">
             <h3 className="font-display font-semibold text-foreground mb-4">Recent Orders</h3>
             {orders.length === 0 ? (
@@ -280,7 +367,7 @@ export default function AdminDashboard() {
                     <div className="text-right">
                       <p className="text-sm font-semibold text-foreground">TZS {o.total_amount.toLocaleString()}</p>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
-                        o.status === "delivered" ? "bg-emerald/10 text-emerald" : "bg-amber-100 text-amber-700"
+                        o.status === "delivered" ? "bg-secondary/10 text-secondary" : "bg-amber-100 text-amber-700"
                       }`}>{o.status}</span>
                     </div>
                   </div>
