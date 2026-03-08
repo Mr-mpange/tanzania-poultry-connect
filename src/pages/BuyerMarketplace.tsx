@@ -65,13 +65,49 @@ export default function BuyerMarketplace() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [{ data: inv }, { data: ord }] = await Promise.all([
+    const [{ data: inv }, { data: ord }, { data: revData }] = await Promise.all([
       supabase.from("inventory").select("*, profiles!inventory_farmer_id_fkey(full_name, location)").eq("is_available", true).gt("quantity", 0),
       supabase.from("orders").select("*, order_items(*)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("reviews" as any).select("inventory_id, rating"),
     ]);
     setInventory(inv || []);
     setOrders(ord || []);
+    // Aggregate reviews
+    const reviewMap: Record<string, { total: number; count: number }> = {};
+    (revData || []).forEach((r: any) => {
+      if (!reviewMap[r.inventory_id]) reviewMap[r.inventory_id] = { total: 0, count: 0 };
+      reviewMap[r.inventory_id].total += r.rating;
+      reviewMap[r.inventory_id].count += 1;
+    });
+    const avgMap: Record<string, { avg: number; count: number }> = {};
+    Object.entries(reviewMap).forEach(([id, v]) => { avgMap[id] = { avg: v.total / v.count, count: v.count }; });
+    setReviews(avgMap);
     setLoading(false);
+  };
+
+  const fetchProductReviews = async (inventoryId: string) => {
+    const { data } = await supabase.from("reviews" as any).select("*, profiles:buyer_id(full_name)").eq("inventory_id", inventoryId).order("created_at", { ascending: false });
+    setProductReviews(data || []);
+  };
+
+  const submitReview = async (inventoryId: string) => {
+    if (!user) return;
+    // Find a delivered order containing this product
+    const deliveredOrder = orders.find(o => o.status === "delivered" && o.order_items?.some((oi: any) => oi.inventory_id === inventoryId));
+    if (!deliveredOrder) { toast.error("You can only review products from delivered orders"); return; }
+    const { error } = await supabase.from("reviews" as any).insert({
+      buyer_id: user.id, inventory_id: inventoryId, order_id: deliveredOrder.id,
+      rating: reviewForm.rating, comment: reviewForm.comment || null,
+    });
+    if (error) {
+      if (error.code === "23505") toast.error("You already reviewed this product for that order");
+      else toast.error(error.message);
+      return;
+    }
+    toast.success("Review submitted!");
+    setReviewForm({ rating: 5, comment: "" });
+    fetchProductReviews(inventoryId);
+    fetchData();
   };
 
   const filteredInventory = inventory.filter((item) => {
