@@ -63,6 +63,19 @@ export default function FarmerDashboard() {
     ]);
     setInventory(inv || []);
     setOrders(ord || []);
+
+    // Fetch recent reviews for this farmer's products
+    if (inv && inv.length > 0) {
+      const inventoryIds = inv.map((i: any) => i.id);
+      const { data: revs } = await supabase
+        .from("reviews")
+        .select("*, inventory:inventory_id(product_name), profiles:buyer_id(full_name)")
+        .in("inventory_id", inventoryIds)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      setRecentReviews(revs || []);
+    }
+
     setLoading(false);
   };
 
