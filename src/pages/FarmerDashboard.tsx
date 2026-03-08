@@ -46,6 +46,8 @@ export default function FarmerDashboard() {
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 10;
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
