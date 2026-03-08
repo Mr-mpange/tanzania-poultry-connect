@@ -239,11 +239,18 @@ export default function BuyerMarketplace() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
                 className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
                 className="bg-card border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none">
                 <option value="">All Categories</option>
                 <option value="chicken">Chicken</option><option value="eggs">Eggs</option><option value="meat">Meat</option><option value="other">Other</option>
+              </select>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
+                className="bg-card border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none">
+                <option value="newest">Newest</option>
+                <option value="price_low">Price: Low → High</option>
+                <option value="price_high">Price: High → Low</option>
+                <option value="rating">Top Rated</option>
               </select>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
