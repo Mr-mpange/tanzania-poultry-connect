@@ -15,16 +15,10 @@ import BuyerMarketplace from "./pages/BuyerMarketplace";
 import AdminDashboard from "./pages/AdminDashboard";
 import DistributorDashboard from "./pages/DistributorDashboard";
 import ProfileSettings from "./pages/ProfileSettings";
+import WelcomeDashboard from "./pages/WelcomeDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-
-function DashboardRedirect() {
-  const { role, loading } = useAuth();
-  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="w-8 h-8 border-4 border-secondary border-t-transparent rounded-full animate-spin" /></div>;
-  if (!role) return <Navigate to="/auth" replace />;
-  return <Navigate to={`/dashboard/${role}`} replace />;
-}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -39,7 +33,7 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<DashboardRedirect />} />
+              <Route path="/dashboard" element={<ProtectedRoute><WelcomeDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/farmer" element={<ProtectedRoute allowedRoles={["farmer"]}><FarmerDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/farmer/orders" element={<ProtectedRoute allowedRoles={["farmer"]}><FarmerDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/buyer" element={<ProtectedRoute allowedRoles={["buyer"]}><BuyerMarketplace /></ProtectedRoute>} />
