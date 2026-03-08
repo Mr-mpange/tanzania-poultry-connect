@@ -210,14 +210,19 @@ export default function BuyerMarketplace() {
             ) : filteredInventory.map((item) => (
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="bg-card border border-border rounded-xl p-5 shadow-card hover:shadow-elevated transition-all">
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-display font-semibold text-foreground">{item.product_name}</h3>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                       <MapPin className="w-3 h-3" /> {item.location || "Unknown"} · <Package className="w-3 h-3" /> {(item.profiles as any)?.full_name || "Farmer"}
                     </p>
                   </div>
-                  <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => toggleFavorite(item.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                      <Heart className={`w-4 h-4 ${favoriteIds.has(item.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
+                    </button>
+                    <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span>
+                  </div>
                 </div>
                 {item.description && <p className="text-xs text-muted-foreground mb-3">{item.description}</p>}
                 <div className="flex items-center justify-between">
