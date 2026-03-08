@@ -284,7 +284,7 @@ export default function BuyerMarketplace() {
             ) : filteredInventory.map((item) => (
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="bg-card border border-border rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all cursor-pointer"
-                onClick={() => setSelectedProduct(item)}>
+                onClick={() => { setSelectedProduct(item); fetchProductReviews(item.id); }}>
                 {/* Product Image */}
                 {item.image_url ? (
                   <div className="w-full h-40 bg-muted">
