@@ -399,6 +399,59 @@ export default function BuyerMarketplace() {
                     </button>
                   )}
                 </div>
+
+                {/* Reviews Section */}
+                <div className="border-t border-border pt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-display font-semibold text-sm">Reviews</h4>
+                    {reviews[selectedProduct.id] && (
+                      <div className="flex items-center gap-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(reviews[selectedProduct.id].avg) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                        ))}
+                        <span className="text-xs text-muted-foreground ml-1">{reviews[selectedProduct.id].avg.toFixed(1)} ({reviews[selectedProduct.id].count})</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Write a review */}
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Write a review (delivered orders only)</p>
+                    <div className="flex items-center gap-1">
+                      {[1,2,3,4,5].map(s => (
+                        <button key={s} onClick={() => setReviewForm(f => ({ ...f, rating: s }))}>
+                          <Star className={`w-5 h-5 ${s <= reviewForm.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <input value={reviewForm.comment} onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
+                      placeholder="Optional comment..." className="w-full bg-card border border-border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
+                    <button onClick={() => submitReview(selectedProduct.id)}
+                      className="bg-emerald text-accent-foreground px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-light transition-colors">
+                      Submit Review
+                    </button>
+                  </div>
+
+                  {/* Existing reviews */}
+                  {productReviews.length > 0 && (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {productReviews.map((r: any) => (
+                        <div key={r.id} className="bg-card border border-border rounded-lg p-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              {[1,2,3,4,5].map(s => (
+                                <Star key={s} className={`w-3 h-3 ${s <= r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                              ))}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                          </div>
+                          {r.comment && <p className="text-xs text-foreground mt-1">{r.comment}</p>}
+                          <p className="text-xs text-muted-foreground mt-0.5">{(r.profiles as any)?.full_name || "Buyer"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
