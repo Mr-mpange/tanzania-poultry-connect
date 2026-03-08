@@ -6,6 +6,31 @@ import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Ch
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
+const useFavorites = (userId: string | undefined) => {
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from("favorites").select("inventory_id").eq("user_id", userId)
+      .then(({ data }) => setFavoriteIds(new Set((data || []).map(f => f.inventory_id))));
+  }, [userId]);
+
+  const toggle = async (inventoryId: string) => {
+    if (!userId) return;
+    if (favoriteIds.has(inventoryId)) {
+      await supabase.from("favorites").delete().eq("user_id", userId).eq("inventory_id", inventoryId);
+      setFavoriteIds(prev => { const n = new Set(prev); n.delete(inventoryId); return n; });
+      toast.success("Removed from favorites");
+    } else {
+      await supabase.from("favorites").insert({ user_id: userId, inventory_id: inventoryId } as any);
+      setFavoriteIds(prev => new Set(prev).add(inventoryId));
+      toast.success("Added to favorites");
+    }
+  };
+
+  return { favoriteIds, toggle };
+};
+
 const navItems = [
   { title: "Marketplace", url: "/dashboard/buyer", icon: ShoppingCart },
   { title: "My Orders", url: "/dashboard/buyer/orders", icon: ShoppingBag },
@@ -24,7 +49,7 @@ export default function BuyerMarketplace() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [showOrders, setShowOrders] = useState(false);
+  const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
 
   const isOrdersPage = window.location.pathname.includes("/orders");
 
@@ -185,14 +210,19 @@ export default function BuyerMarketplace() {
             ) : filteredInventory.map((item) => (
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="bg-card border border-border rounded-xl p-5 shadow-card hover:shadow-elevated transition-all">
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-display font-semibold text-foreground">{item.product_name}</h3>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                       <MapPin className="w-3 h-3" /> {item.location || "Unknown"} · <Package className="w-3 h-3" /> {(item.profiles as any)?.full_name || "Farmer"}
                     </p>
                   </div>
-                  <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => toggleFavorite(item.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                      <Heart className={`w-4 h-4 ${favoriteIds.has(item.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
+                    </button>
+                    <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span>
+                  </div>
                 </div>
                 {item.description && <p className="text-xs text-muted-foreground mb-3">{item.description}</p>}
                 <div className="flex items-center justify-between">
