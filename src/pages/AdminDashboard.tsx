@@ -238,7 +238,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
+                  {filteredUsers.map((u) => (
                     <tr key={u.id} className="border-b border-border hover:bg-muted/30">
                       <td className="p-3 font-medium text-foreground">{u.full_name || "—"}</td>
                       <td className="p-3"><span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full capitalize">{u.role}</span></td>
