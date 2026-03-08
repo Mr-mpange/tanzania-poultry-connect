@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { sendBrowserNotification } from "@/lib/browserNotifications";
 
 export interface AppNotification {
   id: string;
@@ -50,7 +51,10 @@ export function useNotifications() {
         const order = payload.new as any;
         const old = payload.old as any;
         if (order.status !== old.status) {
-          if ((role === "buyer" && order.buyer_id === user.id) || (role === "farmer" && order.farmer_id === user.id)) {
+          if (role === "buyer" && order.buyer_id === user.id) {
+            addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
+            sendBrowserNotification(order.order_number, order.status);
+          } else if (role === "farmer" && order.farmer_id === user.id) {
             addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
           }
         }
