@@ -115,6 +115,13 @@ export default function BuyerMarketplace() {
     const matchCategory = !categoryFilter || item.category === categoryFilter;
     const matchLocation = !locationFilter || (item.location || "").toLowerCase().includes(locationFilter.toLowerCase());
     return matchSearch && matchCategory && matchLocation;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "price_low": return a.price_per_unit - b.price_per_unit;
+      case "price_high": return b.price_per_unit - a.price_per_unit;
+      case "rating": return (reviews[b.id]?.avg || 0) - (reviews[a.id]?.avg || 0);
+      default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
   });
 
   const addToCart = (itemId: string) => {
