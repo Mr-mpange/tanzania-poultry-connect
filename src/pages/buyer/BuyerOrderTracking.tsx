@@ -57,6 +57,15 @@ export default function BuyerOrderTracking() {
                     <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full capitalize">{o.status.replace("_", " ")}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">TZS {o.total_amount.toLocaleString()}</p>
+                  {(() => {
+                    const eta = estimateEtaMinutes(o.status);
+                    return eta !== null ? (
+                      <p className="text-xs text-secondary flex items-center gap-1 mt-1">
+                        <Timer className="w-3 h-3" />
+                        ETA: {eta >= 60 ? `${Math.floor(eta / 60)}h ${eta % 60}m` : `${eta} min`}
+                      </p>
+                    ) : null;
+                  })()}
                 </button>
               ))}
             </div>
