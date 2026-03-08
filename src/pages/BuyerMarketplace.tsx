@@ -49,8 +49,12 @@ export default function BuyerMarketplace() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "price_low" | "price_high" | "rating">("newest");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [reviews, setReviews] = useState<Record<string, { avg: number; count: number }>>({});
+  const [productReviews, setProductReviews] = useState<any[]>([]);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
 
   const isOrdersPage = window.location.pathname.includes("/orders");
