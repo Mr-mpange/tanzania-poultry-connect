@@ -439,9 +439,14 @@ export default function FarmerDashboard() {
               </thead>
               <tbody>
                 {paginatedInventory.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center p-8 text-muted-foreground">No inventory items yet. Add your first product!</td></tr>
+                  <tr><td colSpan={9} className="text-center p-8 text-muted-foreground">
+                    {searchQuery ? "No matching products found." : "No inventory items yet. Add your first product!"}
+                  </td></tr>
                 ) : paginatedInventory.map((item) => (
-                  <tr key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                  <tr key={item.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${selectedIds.has(item.id) ? "bg-muted/40" : ""}`}>
+                    <td className="p-3">
+                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="rounded border-border" />
+                    </td>
                     <td className="p-3">
                       {item.image_url ? (
                         <img src={item.image_url} alt={item.product_name} className="w-10 h-10 rounded-lg object-cover" />
