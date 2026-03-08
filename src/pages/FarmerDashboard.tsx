@@ -423,6 +423,10 @@ export default function FarmerDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left p-3 font-medium text-muted-foreground w-10">
+                    <input type="checkbox" checked={selectedIds.size === paginatedInventory.length && paginatedInventory.length > 0}
+                      onChange={toggleSelectAll} className="rounded border-border" />
+                  </th>
                   <th className="text-left p-3 font-medium text-muted-foreground w-12"></th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
