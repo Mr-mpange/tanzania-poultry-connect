@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star, ChevronLeft, ChevronRight, Search, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -46,6 +46,8 @@ export default function FarmerDashboard() {
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 10;
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
@@ -170,8 +172,47 @@ export default function FarmerDashboard() {
   const avgRating = recentReviews.length > 0
     ? (recentReviews.reduce((s, r) => s + r.rating, 0) / recentReviews.length).toFixed(1)
     : "—";
-  const totalPages = Math.ceil(inventory.length / PAGE_SIZE);
-  const paginatedInventory = inventory.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const filteredInventory = inventory.filter(i => {
+    const q = searchQuery.toLowerCase();
+    return !q || i.product_name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q);
+  });
+  const totalPages = Math.ceil(filteredInventory.length / PAGE_SIZE);
+  const paginatedInventory = filteredInventory.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedInventory.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedInventory.map(i => i.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("inventory").delete().in("id", ids);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Deleted ${ids.length} item(s)`);
+    setSelectedIds(new Set());
+    fetchData();
+  };
+
+  const handleBulkToggleAvailability = async (available: boolean) => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("inventory").update({ is_available: available }).in("id", ids);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Updated ${ids.length} item(s)`);
+    setSelectedIds(new Set());
+    fetchData();
+  };
 
   if (loading) {
     return (
@@ -289,13 +330,40 @@ export default function FarmerDashboard() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="font-display font-semibold text-lg text-foreground">My Inventory</h2>
-          <button onClick={() => { setEditItem(null); setShowForm(true); setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 }); }}
-            className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
-            <Plus className="w-4 h-4" /> Add Product
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input placeholder="Search products..." value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
+                className="bg-muted border border-border rounded-lg pl-8 pr-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none w-48" />
+            </div>
+            <button onClick={() => { setEditItem(null); setShowForm(true); setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 }); }}
+              className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
+              <Plus className="w-4 h-4" /> Add Product
+            </button>
+          </div>
         </div>
+
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-2">
+            <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+            <button onClick={() => handleBulkToggleAvailability(true)}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors">
+              <Eye className="w-3.5 h-3.5" /> Mark Available
+            </button>
+            <button onClick={() => handleBulkToggleAvailability(false)}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+              <EyeOff className="w-3.5 h-3.5" /> Mark Unavailable
+            </button>
+            <button onClick={handleBulkDelete}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" /> Delete
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
+          </div>
+        )}
 
         <AnimatePresence>
           {showForm && (
@@ -355,6 +423,10 @@ export default function FarmerDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left p-3 font-medium text-muted-foreground w-10">
+                    <input type="checkbox" checked={selectedIds.size === paginatedInventory.length && paginatedInventory.length > 0}
+                      onChange={toggleSelectAll} className="rounded border-border" />
+                  </th>
                   <th className="text-left p-3 font-medium text-muted-foreground w-12"></th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
@@ -367,9 +439,14 @@ export default function FarmerDashboard() {
               </thead>
               <tbody>
                 {paginatedInventory.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center p-8 text-muted-foreground">No inventory items yet. Add your first product!</td></tr>
+                  <tr><td colSpan={9} className="text-center p-8 text-muted-foreground">
+                    {searchQuery ? "No matching products found." : "No inventory items yet. Add your first product!"}
+                  </td></tr>
                 ) : paginatedInventory.map((item) => (
-                  <tr key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                  <tr key={item.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${selectedIds.has(item.id) ? "bg-muted/40" : ""}`}>
+                    <td className="p-3">
+                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} className="rounded border-border" />
+                    </td>
                     <td className="p-3">
                       {item.image_url ? (
                         <img src={item.image_url} alt={item.product_name} className="w-10 h-10 rounded-lg object-cover" />
@@ -403,7 +480,7 @@ export default function FarmerDashboard() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-border">
               <p className="text-xs text-muted-foreground">
-                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, inventory.length)} of {inventory.length}
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredInventory.length)} of {filteredInventory.length}
               </p>
               <div className="flex items-center gap-1">
                 <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
