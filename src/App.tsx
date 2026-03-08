@@ -33,7 +33,7 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<DashboardRedirect />} />
+              <Route path="/dashboard" element={<ProtectedRoute><WelcomeDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/farmer" element={<ProtectedRoute allowedRoles={["farmer"]}><FarmerDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/farmer/orders" element={<ProtectedRoute allowedRoles={["farmer"]}><FarmerDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/buyer" element={<ProtectedRoute allowedRoles={["buyer"]}><BuyerMarketplace /></ProtectedRoute>} />
