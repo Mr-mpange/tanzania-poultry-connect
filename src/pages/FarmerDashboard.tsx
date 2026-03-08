@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star, ChevronLeft, ChevronRight, Search, Eye, EyeOff } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star, ChevronLeft, ChevronRight, Search, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -48,6 +48,7 @@ export default function FarmerDashboard() {
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lowStockThreshold, setLowStockThreshold] = useState(10);
   const PAGE_SIZE = 10;
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
@@ -172,6 +173,8 @@ export default function FarmerDashboard() {
   const avgRating = recentReviews.length > 0
     ? (recentReviews.reduce((s, r) => s + r.rating, 0) / recentReviews.length).toFixed(1)
     : "—";
+  const lowStockItems = inventory.filter(i => i.quantity > 0 && i.quantity <= lowStockThreshold);
+  const outOfStockItems = inventory.filter(i => i.quantity === 0);
   const filteredInventory = inventory.filter(i => {
     const q = searchQuery.toLowerCase();
     return !q || i.product_name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q);
@@ -300,6 +303,57 @@ export default function FarmerDashboard() {
           <KPICard label="Pending Orders" value={orders.filter(o => o.status === "pending").length} icon={ShoppingCart} color="bg-purple-100 text-purple-600" />
           <KPICard label="Avg Rating" value={avgRating} icon={Star} color="bg-amber-100 text-amber-500" />
         </div>
+
+        {/* Low Stock Alerts */}
+        {(lowStockItems.length > 0 || outOfStockItems.length > 0) && (
+          <div className="bg-card border border-border rounded-xl p-5 shadow-card">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-semibold text-lg text-foreground flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" /> Stock Alerts
+              </h2>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground">Threshold:</label>
+                <input type="number" min={1} max={100} value={lowStockThreshold}
+                  onChange={e => setLowStockThreshold(Math.max(1, +e.target.value))}
+                  className="w-16 bg-muted border border-border rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-ring focus:outline-none" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              {outOfStockItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                      <XCircle className="w-4 h-4 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.product_name}</p>
+                      <p className="text-xs text-destructive">Out of stock</p>
+                    </div>
+                  </div>
+                  <button onClick={() => openEdit(item)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors">
+                    Restock
+                  </button>
+                </div>
+              ))}
+              {lowStockItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.product_name}</p>
+                      <p className="text-xs text-amber-600">Only {item.quantity} {item.unit} left</p>
+                    </div>
+                  </div>
+                  <button onClick={() => openEdit(item)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors">
+                    Restock
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recent Reviews Widget */}
         {recentReviews.length > 0 && (
