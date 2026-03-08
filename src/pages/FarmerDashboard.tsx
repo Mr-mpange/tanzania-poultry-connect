@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -51,6 +51,8 @@ export default function FarmerDashboard() {
     price_per_unit: 0, description: "", location: "", health_status: "healthy",
     vaccination_status: "", weight_kg: 0,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -65,25 +67,53 @@ export default function FarmerDashboard() {
 
   useEffect(() => { fetchData(); }, [user]);
 
+  const uploadImage = async (file: File, itemId: string): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const path = `${user!.id}/${itemId}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) { toast.error("Image upload failed"); return null; }
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     const data = { ...form, farmer_id: user.id, is_available: form.quantity > 0 };
     try {
       if (editItem) {
-        await supabase.from("inventory").update(data).eq("id", editItem.id);
+        let image_url = editItem.image_url;
+        if (imageFile) {
+          const url = await uploadImage(imageFile, editItem.id);
+          if (url) image_url = url;
+        }
+        await supabase.from("inventory").update({ ...data, image_url } as any).eq("id", editItem.id);
         toast.success("Item updated");
       } else {
-        await supabase.from("inventory").insert(data as any);
+        const { data: inserted, error } = await supabase.from("inventory").insert(data as any).select().single();
+        if (error) throw error;
+        if (imageFile && inserted) {
+          const url = await uploadImage(imageFile, inserted.id);
+          if (url) await supabase.from("inventory").update({ image_url: url } as any).eq("id", inserted.id);
+        }
         toast.success("Item added");
       }
       setShowForm(false);
       setEditItem(null);
+      setImageFile(null);
+      setImagePreview(null);
       setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 });
       fetchData();
     } catch (err: any) {
       toast.error(err.message);
     }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleDelete = async (id: string) => {
@@ -100,6 +130,8 @@ export default function FarmerDashboard() {
       location: item.location || "", health_status: item.health_status || "healthy",
       vaccination_status: item.vaccination_status || "", weight_kg: item.weight_kg || 0,
     });
+    setImageFile(null);
+    setImagePreview(item.image_url || null);
     setShowForm(true);
   };
 
@@ -246,6 +278,18 @@ export default function FarmerDashboard() {
                 <div className="md:col-span-2 lg:col-span-3">
                   <textarea placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2}
                     className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none resize-none" />
+                </div>
+                <div className="md:col-span-2 lg:col-span-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <div className="flex items-center gap-2 bg-muted border border-border rounded-lg px-3 py-2 text-sm hover:bg-muted/80 transition-colors">
+                      <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">{imageFile ? imageFile.name : "Upload Product Image"}</span>
+                    </div>
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                    {imagePreview && (
+                      <img src={imagePreview} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-border" />
+                    )}
+                  </label>
                 </div>
                 <button type="submit" className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
                   {editItem ? "Update" : "Save"}

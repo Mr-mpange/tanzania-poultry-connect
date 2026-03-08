@@ -101,6 +101,7 @@ export type Database = {
           farmer_id: string
           health_status: string | null
           id: string
+          image_url: string | null
           is_available: boolean
           location: string | null
           price_per_unit: number
@@ -118,6 +119,7 @@ export type Database = {
           farmer_id: string
           health_status?: string | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
           location?: string | null
           price_per_unit?: number
@@ -135,6 +137,7 @@ export type Database = {
           farmer_id?: string
           health_status?: string | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
           location?: string | null
           price_per_unit?: number
