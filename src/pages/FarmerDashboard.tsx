@@ -294,7 +294,6 @@ export default function FarmerDashboard() {
                 <button type="submit" className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
                   {editItem ? "Update" : "Save"}
                 </button>
-                </button>
               </form>
             </motion.div>
           )}
