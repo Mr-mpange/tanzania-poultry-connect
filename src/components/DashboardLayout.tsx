@@ -82,7 +82,7 @@ function ThemeToggle() {
   );
 }
 
-
+function AppSidebar({ navItems, title }: { navItems: NavItem[]; title: string }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { signOut, profile } = useAuth();
