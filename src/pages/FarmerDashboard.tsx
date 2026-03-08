@@ -304,6 +304,7 @@ export default function FarmerDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left p-3 font-medium text-muted-foreground w-12"></th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Qty</th>
@@ -315,10 +316,18 @@ export default function FarmerDashboard() {
               </thead>
               <tbody>
                 {inventory.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">No inventory items yet. Add your first product!</td></tr>
+                  <tr><td colSpan={8} className="text-center p-8 text-muted-foreground">No inventory items yet. Add your first product!</td></tr>
                 ) : inventory.map((item) => (
                   <tr key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-medium text-foreground">{item.product_name}</td>
+                    <td className="p-3">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.product_name} className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                          <Package className="w-4 h-4 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </td>
                     <td className="p-3"><span className="bg-secondary/10 text-secondary text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span></td>
                     <td className="p-3 text-foreground">{item.quantity} {item.unit}</td>
                     <td className="p-3 text-foreground">TZS {item.price_per_unit.toLocaleString()}</td>
