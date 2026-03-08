@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -45,6 +45,8 @@ export default function FarmerDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 10;
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState({
@@ -165,6 +167,11 @@ export default function FarmerDashboard() {
 
   const totalStock = inventory.reduce((s, i) => s + i.quantity, 0);
   const totalValue = inventory.reduce((s, i) => s + i.quantity * i.price_per_unit, 0);
+  const avgRating = recentReviews.length > 0
+    ? (recentReviews.reduce((s, r) => s + r.rating, 0) / recentReviews.length).toFixed(1)
+    : "—";
+  const totalPages = Math.ceil(inventory.length / PAGE_SIZE);
+  const paginatedInventory = inventory.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   if (loading) {
     return (
@@ -245,11 +252,12 @@ export default function FarmerDashboard() {
   return (
     <DashboardLayout navItems={navItems} title="Farmer Dashboard">
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <KPICard label="Total Products" value={inventory.length} icon={Package} color="bg-secondary/10 text-secondary" />
           <KPICard label="Total Stock" value={totalStock.toLocaleString()} icon={Egg} color="bg-blue-100 text-blue-600" />
           <KPICard label="Inventory Value" value={`TZS ${totalValue.toLocaleString()}`} icon={TrendingUp} color="bg-amber-100 text-amber-600" />
           <KPICard label="Pending Orders" value={orders.filter(o => o.status === "pending").length} icon={ShoppingCart} color="bg-purple-100 text-purple-600" />
+          <KPICard label="Avg Rating" value={avgRating} icon={Star} color="bg-amber-100 text-amber-500" />
         </div>
 
         {/* Recent Reviews Widget */}
@@ -358,9 +366,9 @@ export default function FarmerDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {inventory.length === 0 ? (
+                {paginatedInventory.length === 0 ? (
                   <tr><td colSpan={8} className="text-center p-8 text-muted-foreground">No inventory items yet. Add your first product!</td></tr>
-                ) : inventory.map((item) => (
+                ) : paginatedInventory.map((item) => (
                   <tr key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                     <td className="p-3">
                       {item.image_url ? (
@@ -392,6 +400,24 @@ export default function FarmerDashboard() {
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, inventory.length)} of {inventory.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors disabled:opacity-30">
+                  <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                </button>
+                <span className="text-xs text-muted-foreground px-2">{page + 1} / {totalPages}</span>
+                <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors disabled:opacity-30">
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
