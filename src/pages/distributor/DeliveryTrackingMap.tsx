@@ -7,6 +7,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
+import RouteOptimizer from "@/components/distributor/RouteOptimizer";
+import type { DeliveryStop } from "@/lib/routeOptimizer";
 
 const navItems = [
   { title: "Deliveries", url: "/dashboard/distributor", icon: Truck },
