@@ -288,6 +288,60 @@ export default function BuyerMarketplace() {
           </div>
         </div>
       )}
+
+      {/* Product Detail Modal */}
+      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+        <DialogContent className="max-w-lg">
+          {selectedProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-lg">{selectedProduct.product_name}</DialogTitle>
+              </DialogHeader>
+              {selectedProduct.image_url ? (
+                <img src={selectedProduct.image_url} alt={selectedProduct.product_name} className="w-full h-56 object-cover rounded-xl" />
+              ) : (
+                <div className="w-full h-56 bg-muted rounded-xl flex items-center justify-center">
+                  <Package className="w-16 h-16 text-muted-foreground/30" />
+                </div>
+              )}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-display font-bold text-emerald">TZS {selectedProduct.price_per_unit.toLocaleString()}</p>
+                  <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{selectedProduct.category}</span>
+                </div>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> {selectedProduct.location || "Unknown"} · <Package className="w-3.5 h-3.5" /> {(selectedProduct.profiles as any)?.full_name || "Farmer"}
+                </p>
+                {selectedProduct.description && <p className="text-sm text-foreground">{selectedProduct.description}</p>}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>{selectedProduct.quantity} {selectedProduct.unit} available</span>
+                  {selectedProduct.health_status && <span>Health: {selectedProduct.health_status}</span>}
+                  {selectedProduct.weight_kg && <span>Weight: {selectedProduct.weight_kg} kg</span>}
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => toggleFavorite(selectedProduct.id)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">
+                    <Heart className={`w-4 h-4 ${favoriteIds.has(selectedProduct.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
+                    {favoriteIds.has(selectedProduct.id) ? "Saved" : "Save"}
+                  </button>
+                  {cart[selectedProduct.id] ? (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => decreaseQty(selectedProduct.id)} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center"><Minus className="w-4 h-4" /></button>
+                      <span className="font-semibold w-6 text-center">{cart[selectedProduct.id]}</span>
+                      <button onClick={() => addToCart(selectedProduct.id)} className="w-8 h-8 rounded-lg bg-emerald flex items-center justify-center"><Plus className="w-4 h-4 text-accent-foreground" /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => addToCart(selectedProduct.id)}
+                      className="flex-1 bg-emerald text-accent-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-light transition-colors">
+                      Add to Cart
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
