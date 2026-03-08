@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ShoppingCart, ShoppingBag, MapPin, Heart, MessageSquare, Settings, Loader2, Clock, CheckCircle, Truck, Package, XCircle } from "lucide-react";
+import { ShoppingCart, ShoppingBag, MapPin, Heart, MessageSquare, Settings, Loader2, Clock, CheckCircle, Truck, Package, XCircle, Timer } from "lucide-react";
+import { estimateEtaMinutes } from "@/lib/routeOptimizer";
 
 const navItems = [
   { title: "Marketplace", url: "/dashboard/buyer", icon: ShoppingCart },
@@ -56,6 +57,15 @@ export default function BuyerOrderTracking() {
                     <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full capitalize">{o.status.replace("_", " ")}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">TZS {o.total_amount.toLocaleString()}</p>
+                  {(() => {
+                    const eta = estimateEtaMinutes(o.status);
+                    return eta !== null ? (
+                      <p className="text-xs text-secondary flex items-center gap-1 mt-1">
+                        <Timer className="w-3 h-3" />
+                        ETA: {eta >= 60 ? `${Math.floor(eta / 60)}h ${eta % 60}m` : `${eta} min`}
+                      </p>
+                    ) : null;
+                  })()}
                 </button>
               ))}
             </div>
@@ -64,7 +74,18 @@ export default function BuyerOrderTracking() {
             {selected && (
               <div className="bg-card border border-border rounded-xl p-6 shadow-card">
                 <h3 className="font-display font-semibold text-foreground mb-1">{selected.order_number}</h3>
-                <p className="text-sm text-muted-foreground mb-6">TZS {selected.total_amount.toLocaleString()} • {new Date(selected.created_at).toLocaleDateString()}</p>
+                <p className="text-sm text-muted-foreground mb-2">TZS {selected.total_amount.toLocaleString()} • {new Date(selected.created_at).toLocaleDateString()}</p>
+                {(() => {
+                  const eta = estimateEtaMinutes(selected.status);
+                  return eta !== null ? (
+                    <div className="flex items-center gap-2 bg-secondary/10 text-secondary rounded-lg px-3 py-2 mb-4">
+                      <Timer className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        Estimated delivery: {eta >= 60 ? `${Math.floor(eta / 60)}h ${eta % 60}m` : `${eta} min`}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
 
                 <div className="space-y-0">
                   {STATUS_STEPS.map((step, i) => {

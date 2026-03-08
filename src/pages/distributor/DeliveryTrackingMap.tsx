@@ -7,6 +7,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
+import RouteOptimizer from "@/components/distributor/RouteOptimizer";
+import type { DeliveryStop } from "@/lib/routeOptimizer";
 
 const navItems = [
   { title: "Deliveries", url: "/dashboard/distributor", icon: Truck },
@@ -214,6 +216,15 @@ export default function DeliveryTrackingMap() {
             </MapContainer>
           </div>
         )}
+
+        {/* Route Optimization */}
+        <RouteOptimizer
+          origin={myPosition}
+          deliveries={deliveries}
+          onSelectOrder={(ordered: DeliveryStop[]) => {
+            toast.success(`Route optimized: ${ordered.map((s, i) => `${i + 1}. ${s.label}`).join(" → ")}`);
+          }}
+        />
 
         {/* Active deliveries list */}
         <div className="bg-card border border-border rounded-xl p-5 shadow-card">
