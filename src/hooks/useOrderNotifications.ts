@@ -2,9 +2,17 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { sendBrowserNotification, requestNotificationPermission } from "@/lib/browserNotifications";
 
 export function useOrderNotifications() {
   const { user, role } = useAuth();
+
+  // Request browser notification permission for buyers on mount
+  useEffect(() => {
+    if (user && role === "buyer") {
+      requestNotificationPermission();
+    }
+  }, [user, role]);
 
   useEffect(() => {
     if (!user || !role) return;
@@ -44,6 +52,8 @@ export function useOrderNotifications() {
               toast.info(`📋 Order #${order.order_number} → ${order.status.replace("_", " ")}`, {
                 duration: 5000,
               });
+              // Also send browser push notification
+              sendBrowserNotification(order.order_number, order.status);
             } else if (role === "farmer" && order.farmer_id === user.id) {
               toast.info(`📋 Order #${order.order_number} status: ${order.status.replace("_", " ")}`, {
                 duration: 5000,
