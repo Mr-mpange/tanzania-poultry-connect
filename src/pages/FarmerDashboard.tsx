@@ -252,11 +252,12 @@ export default function FarmerDashboard() {
   return (
     <DashboardLayout navItems={navItems} title="Farmer Dashboard">
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <KPICard label="Total Products" value={inventory.length} icon={Package} color="bg-secondary/10 text-secondary" />
           <KPICard label="Total Stock" value={totalStock.toLocaleString()} icon={Egg} color="bg-blue-100 text-blue-600" />
           <KPICard label="Inventory Value" value={`TZS ${totalValue.toLocaleString()}`} icon={TrendingUp} color="bg-amber-100 text-amber-600" />
           <KPICard label="Pending Orders" value={orders.filter(o => o.status === "pending").length} icon={ShoppingCart} color="bg-purple-100 text-purple-600" />
+          <KPICard label="Avg Rating" value={avgRating} icon={Star} color="bg-amber-100 text-amber-500" />
         </div>
 
         {/* Recent Reviews Widget */}
