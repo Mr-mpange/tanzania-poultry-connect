@@ -74,7 +74,18 @@ export default function BuyerOrderTracking() {
             {selected && (
               <div className="bg-card border border-border rounded-xl p-6 shadow-card">
                 <h3 className="font-display font-semibold text-foreground mb-1">{selected.order_number}</h3>
-                <p className="text-sm text-muted-foreground mb-6">TZS {selected.total_amount.toLocaleString()} • {new Date(selected.created_at).toLocaleDateString()}</p>
+                <p className="text-sm text-muted-foreground mb-2">TZS {selected.total_amount.toLocaleString()} • {new Date(selected.created_at).toLocaleDateString()}</p>
+                {(() => {
+                  const eta = estimateEtaMinutes(selected.status);
+                  return eta !== null ? (
+                    <div className="flex items-center gap-2 bg-secondary/10 text-secondary rounded-lg px-3 py-2 mb-4">
+                      <Timer className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        Estimated delivery: {eta >= 60 ? `${Math.floor(eta / 60)}h ${eta % 60}m` : `${eta} min`}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
 
                 <div className="space-y-0">
                   {STATUS_STEPS.map((step, i) => {

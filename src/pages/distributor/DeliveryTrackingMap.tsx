@@ -217,6 +217,15 @@ export default function DeliveryTrackingMap() {
           </div>
         )}
 
+        {/* Route Optimization */}
+        <RouteOptimizer
+          origin={myPosition}
+          deliveries={deliveries}
+          onSelectOrder={(ordered: DeliveryStop[]) => {
+            toast.success(`Route optimized: ${ordered.map((s, i) => `${i + 1}. ${s.label}`).join(" → ")}`);
+          }}
+        />
+
         {/* Active deliveries list */}
         <div className="bg-card border border-border rounded-xl p-5 shadow-card">
           <h3 className="font-display font-semibold text-foreground mb-3">Active Deliveries ({deliveries.length})</h3>
