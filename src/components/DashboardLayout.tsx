@@ -73,8 +73,16 @@ function NotificationBell() {
     </div>
   );
 }
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  return (
+    <button onClick={toggle} className="p-2 rounded-lg hover:bg-muted transition-colors mr-1" title="Toggle theme">
+      {theme === "dark" ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
+    </button>
+  );
+}
 
-function AppSidebar({ navItems, title }: { navItems: NavItem[]; title: string }) {
+
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { signOut, profile } = useAuth();
