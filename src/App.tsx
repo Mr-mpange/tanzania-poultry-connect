@@ -14,6 +14,7 @@ import FarmerDashboard from "./pages/FarmerDashboard";
 import BuyerMarketplace from "./pages/BuyerMarketplace";
 import AdminDashboard from "./pages/AdminDashboard";
 import DistributorDashboard from "./pages/DistributorDashboard";
+import ProfileSettings from "./pages/ProfileSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
