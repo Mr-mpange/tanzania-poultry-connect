@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -43,6 +43,7 @@ export default function FarmerDashboard() {
   const { user } = useAuth();
   const [inventory, setInventory] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
+  const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
@@ -62,6 +63,19 @@ export default function FarmerDashboard() {
     ]);
     setInventory(inv || []);
     setOrders(ord || []);
+
+    // Fetch recent reviews for this farmer's products
+    if (inv && inv.length > 0) {
+      const inventoryIds = inv.map((i: any) => i.id);
+      const { data: revs } = await supabase
+        .from("reviews")
+        .select("*, inventory:inventory_id(product_name), profiles:buyer_id(full_name)")
+        .in("inventory_id", inventoryIds)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      setRecentReviews(revs || []);
+    }
+
     setLoading(false);
   };
 
@@ -237,6 +251,35 @@ export default function FarmerDashboard() {
           <KPICard label="Inventory Value" value={`TZS ${totalValue.toLocaleString()}`} icon={TrendingUp} color="bg-amber-100 text-amber-600" />
           <KPICard label="Pending Orders" value={orders.filter(o => o.status === "pending").length} icon={ShoppingCart} color="bg-purple-100 text-purple-600" />
         </div>
+
+        {/* Recent Reviews Widget */}
+        {recentReviews.length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-5 shadow-card">
+            <h2 className="font-display font-semibold text-lg text-foreground mb-4 flex items-center gap-2">
+              <Star className="w-5 h-5 text-amber-500" /> Recent Reviews
+            </h2>
+            <div className="space-y-3">
+              {recentReviews.map((r: any) => (
+                <div key={r.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                  <div className="flex gap-0.5 mt-0.5 shrink-0">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30"}`} />
+                    ))}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {(r as any).inventory?.product_name || "Product"}
+                    </p>
+                    {r.comment && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{r.comment}</p>}
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      by {(r as any).profiles?.full_name || "Buyer"} · {new Date(r.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <h2 className="font-display font-semibold text-lg text-foreground">My Inventory</h2>
