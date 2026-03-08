@@ -67,25 +67,53 @@ export default function FarmerDashboard() {
 
   useEffect(() => { fetchData(); }, [user]);
 
+  const uploadImage = async (file: File, itemId: string): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const path = `${user!.id}/${itemId}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) { toast.error("Image upload failed"); return null; }
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     const data = { ...form, farmer_id: user.id, is_available: form.quantity > 0 };
     try {
       if (editItem) {
-        await supabase.from("inventory").update(data).eq("id", editItem.id);
+        let image_url = editItem.image_url;
+        if (imageFile) {
+          const url = await uploadImage(imageFile, editItem.id);
+          if (url) image_url = url;
+        }
+        await supabase.from("inventory").update({ ...data, image_url } as any).eq("id", editItem.id);
         toast.success("Item updated");
       } else {
-        await supabase.from("inventory").insert(data as any);
+        const { data: inserted, error } = await supabase.from("inventory").insert(data as any).select().single();
+        if (error) throw error;
+        if (imageFile && inserted) {
+          const url = await uploadImage(imageFile, inserted.id);
+          if (url) await supabase.from("inventory").update({ image_url: url } as any).eq("id", inserted.id);
+        }
         toast.success("Item added");
       }
       setShowForm(false);
       setEditItem(null);
+      setImageFile(null);
+      setImagePreview(null);
       setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 });
       fetchData();
     } catch (err: any) {
       toast.error(err.message);
     }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleDelete = async (id: string) => {
