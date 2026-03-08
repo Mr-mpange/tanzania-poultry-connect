@@ -279,8 +279,21 @@ export default function FarmerDashboard() {
                   <textarea placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2}
                     className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none resize-none" />
                 </div>
+                <div className="md:col-span-2 lg:col-span-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <div className="flex items-center gap-2 bg-muted border border-border rounded-lg px-3 py-2 text-sm hover:bg-muted/80 transition-colors">
+                      <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">{imageFile ? imageFile.name : "Upload Product Image"}</span>
+                    </div>
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                    {imagePreview && (
+                      <img src={imagePreview} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-border" />
+                    )}
+                  </label>
+                </div>
                 <button type="submit" className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
                   {editItem ? "Update" : "Save"}
+                </button>
                 </button>
               </form>
             </motion.div>
