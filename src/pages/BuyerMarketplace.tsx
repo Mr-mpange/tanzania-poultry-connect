@@ -229,7 +229,8 @@ export default function BuyerMarketplace() {
               <div className="col-span-full text-center py-16 text-muted-foreground">No products found</div>
             ) : filteredInventory.map((item) => (
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="bg-card border border-border rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all">
+                className="bg-card border border-border rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all cursor-pointer"
+                onClick={() => setSelectedProduct(item)}>
                 {/* Product Image */}
                 {item.image_url ? (
                   <div className="w-full h-40 bg-muted">
@@ -240,7 +241,7 @@ export default function BuyerMarketplace() {
                     <Package className="w-10 h-10 text-muted-foreground/40" />
                   </div>
                 )}
-                <div className="p-5">
+                <div className="p-5" onClick={e => e.stopPropagation()}>
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-display font-semibold text-foreground">{item.product_name}</h3>
