@@ -49,7 +49,7 @@ export default function BuyerMarketplace() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [showOrders, setShowOrders] = useState(false);
+  const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
 
   const isOrdersPage = window.location.pathname.includes("/orders");
 
