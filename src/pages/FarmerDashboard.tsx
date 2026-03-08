@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare } from "lucide-react";
+import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
