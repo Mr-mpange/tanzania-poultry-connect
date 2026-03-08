@@ -76,8 +76,26 @@ export default function BuyerMarketplace() {
   });
 
   const addToCart = (itemId: string) => {
+    const item = inventory.find(i => i.id === itemId);
+    const currentQty = cart[itemId] || 0;
+    if (item && currentQty >= item.quantity) {
+      toast.error("Cannot exceed available quantity");
+      return;
+    }
     setCart(prev => ({ ...prev, [itemId]: (prev[itemId] || 0) + 1 }));
-    toast.success("Added to cart");
+    if (!cart[itemId]) toast.success("Added to cart");
+  };
+
+  const decreaseQty = (itemId: string) => {
+    setCart(prev => {
+      const newQty = (prev[itemId] || 0) - 1;
+      if (newQty <= 0) {
+        const newCart = { ...prev };
+        delete newCart[itemId];
+        return newCart;
+      }
+      return { ...prev, [itemId]: newQty };
+    });
   };
 
   const removeFromCart = (itemId: string) => {
