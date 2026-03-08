@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus, X } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const useFavorites = (userId: string | undefined) => {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -49,6 +50,7 @@ export default function BuyerMarketplace() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
 
   const isOrdersPage = window.location.pathname.includes("/orders");
@@ -227,7 +229,8 @@ export default function BuyerMarketplace() {
               <div className="col-span-full text-center py-16 text-muted-foreground">No products found</div>
             ) : filteredInventory.map((item) => (
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="bg-card border border-border rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all">
+                className="bg-card border border-border rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all cursor-pointer"
+                onClick={() => setSelectedProduct(item)}>
                 {/* Product Image */}
                 {item.image_url ? (
                   <div className="w-full h-40 bg-muted">
@@ -238,7 +241,7 @@ export default function BuyerMarketplace() {
                     <Package className="w-10 h-10 text-muted-foreground/40" />
                   </div>
                 )}
-                <div className="p-5">
+                <div className="p-5" onClick={e => e.stopPropagation()}>
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-display font-semibold text-foreground">{item.product_name}</h3>
@@ -285,6 +288,60 @@ export default function BuyerMarketplace() {
           </div>
         </div>
       )}
+
+      {/* Product Detail Modal */}
+      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+        <DialogContent className="max-w-lg">
+          {selectedProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-lg">{selectedProduct.product_name}</DialogTitle>
+              </DialogHeader>
+              {selectedProduct.image_url ? (
+                <img src={selectedProduct.image_url} alt={selectedProduct.product_name} className="w-full h-56 object-cover rounded-xl" />
+              ) : (
+                <div className="w-full h-56 bg-muted rounded-xl flex items-center justify-center">
+                  <Package className="w-16 h-16 text-muted-foreground/30" />
+                </div>
+              )}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-display font-bold text-emerald">TZS {selectedProduct.price_per_unit.toLocaleString()}</p>
+                  <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{selectedProduct.category}</span>
+                </div>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> {selectedProduct.location || "Unknown"} · <Package className="w-3.5 h-3.5" /> {(selectedProduct.profiles as any)?.full_name || "Farmer"}
+                </p>
+                {selectedProduct.description && <p className="text-sm text-foreground">{selectedProduct.description}</p>}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>{selectedProduct.quantity} {selectedProduct.unit} available</span>
+                  {selectedProduct.health_status && <span>Health: {selectedProduct.health_status}</span>}
+                  {selectedProduct.weight_kg && <span>Weight: {selectedProduct.weight_kg} kg</span>}
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => toggleFavorite(selectedProduct.id)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors">
+                    <Heart className={`w-4 h-4 ${favoriteIds.has(selectedProduct.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
+                    {favoriteIds.has(selectedProduct.id) ? "Saved" : "Save"}
+                  </button>
+                  {cart[selectedProduct.id] ? (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => decreaseQty(selectedProduct.id)} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center"><Minus className="w-4 h-4" /></button>
+                      <span className="font-semibold w-6 text-center">{cart[selectedProduct.id]}</span>
+                      <button onClick={() => addToCart(selectedProduct.id)} className="w-8 h-8 rounded-lg bg-emerald flex items-center justify-center"><Plus className="w-4 h-4 text-accent-foreground" /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => addToCart(selectedProduct.id)}
+                      className="flex-1 bg-emerald text-accent-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-light transition-colors">
+                      Add to Cart
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
