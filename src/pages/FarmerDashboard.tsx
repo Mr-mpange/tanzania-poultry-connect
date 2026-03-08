@@ -330,13 +330,40 @@ export default function FarmerDashboard() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="font-display font-semibold text-lg text-foreground">My Inventory</h2>
-          <button onClick={() => { setEditItem(null); setShowForm(true); setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 }); }}
-            className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
-            <Plus className="w-4 h-4" /> Add Product
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input placeholder="Search products..." value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
+                className="bg-muted border border-border rounded-lg pl-8 pr-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none w-48" />
+            </div>
+            <button onClick={() => { setEditItem(null); setShowForm(true); setForm({ product_name: "", category: "chicken", quantity: 0, unit: "pieces", price_per_unit: 0, description: "", location: "", health_status: "healthy", vaccination_status: "", weight_kg: 0 }); }}
+              className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
+              <Plus className="w-4 h-4" /> Add Product
+            </button>
+          </div>
         </div>
+
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-4 py-2">
+            <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+            <button onClick={() => handleBulkToggleAvailability(true)}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors">
+              <Eye className="w-3.5 h-3.5" /> Mark Available
+            </button>
+            <button onClick={() => handleBulkToggleAvailability(false)}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+              <EyeOff className="w-3.5 h-3.5" /> Mark Unavailable
+            </button>
+            <button onClick={handleBulkDelete}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" /> Delete
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
+          </div>
+        )}
 
         <AnimatePresence>
           {showForm && (
