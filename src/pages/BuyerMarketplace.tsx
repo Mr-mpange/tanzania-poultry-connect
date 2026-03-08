@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus, X } from "lucide-react";
+import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus, X, Star, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -49,8 +49,12 @@ export default function BuyerMarketplace() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "price_low" | "price_high" | "rating">("newest");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [reviews, setReviews] = useState<Record<string, { avg: number; count: number }>>({});
+  const [productReviews, setProductReviews] = useState<any[]>([]);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
 
   const isOrdersPage = window.location.pathname.includes("/orders");
@@ -61,13 +65,49 @@ export default function BuyerMarketplace() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [{ data: inv }, { data: ord }] = await Promise.all([
+    const [{ data: inv }, { data: ord }, { data: revData }] = await Promise.all([
       supabase.from("inventory").select("*, profiles!inventory_farmer_id_fkey(full_name, location)").eq("is_available", true).gt("quantity", 0),
       supabase.from("orders").select("*, order_items(*)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("reviews" as any).select("inventory_id, rating"),
     ]);
     setInventory(inv || []);
     setOrders(ord || []);
+    // Aggregate reviews
+    const reviewMap: Record<string, { total: number; count: number }> = {};
+    (revData || []).forEach((r: any) => {
+      if (!reviewMap[r.inventory_id]) reviewMap[r.inventory_id] = { total: 0, count: 0 };
+      reviewMap[r.inventory_id].total += r.rating;
+      reviewMap[r.inventory_id].count += 1;
+    });
+    const avgMap: Record<string, { avg: number; count: number }> = {};
+    Object.entries(reviewMap).forEach(([id, v]) => { avgMap[id] = { avg: v.total / v.count, count: v.count }; });
+    setReviews(avgMap);
     setLoading(false);
+  };
+
+  const fetchProductReviews = async (inventoryId: string) => {
+    const { data } = await supabase.from("reviews" as any).select("*, profiles:buyer_id(full_name)").eq("inventory_id", inventoryId).order("created_at", { ascending: false });
+    setProductReviews(data || []);
+  };
+
+  const submitReview = async (inventoryId: string) => {
+    if (!user) return;
+    // Find a delivered order containing this product
+    const deliveredOrder = orders.find(o => o.status === "delivered" && o.order_items?.some((oi: any) => oi.inventory_id === inventoryId));
+    if (!deliveredOrder) { toast.error("You can only review products from delivered orders"); return; }
+    const { error } = await supabase.from("reviews" as any).insert({
+      buyer_id: user.id, inventory_id: inventoryId, order_id: deliveredOrder.id,
+      rating: reviewForm.rating, comment: reviewForm.comment || null,
+    });
+    if (error) {
+      if (error.code === "23505") toast.error("You already reviewed this product for that order");
+      else toast.error(error.message);
+      return;
+    }
+    toast.success("Review submitted!");
+    setReviewForm({ rating: 5, comment: "" });
+    fetchProductReviews(inventoryId);
+    fetchData();
   };
 
   const filteredInventory = inventory.filter((item) => {
@@ -75,6 +115,13 @@ export default function BuyerMarketplace() {
     const matchCategory = !categoryFilter || item.category === categoryFilter;
     const matchLocation = !locationFilter || (item.location || "").toLowerCase().includes(locationFilter.toLowerCase());
     return matchSearch && matchCategory && matchLocation;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "price_low": return a.price_per_unit - b.price_per_unit;
+      case "price_high": return b.price_per_unit - a.price_per_unit;
+      case "rating": return (reviews[b.id]?.avg || 0) - (reviews[a.id]?.avg || 0);
+      default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
   });
 
   const addToCart = (itemId: string) => {
@@ -192,11 +239,18 @@ export default function BuyerMarketplace() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
                 className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
                 className="bg-card border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none">
                 <option value="">All Categories</option>
                 <option value="chicken">Chicken</option><option value="eggs">Eggs</option><option value="meat">Meat</option><option value="other">Other</option>
+              </select>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
+                className="bg-card border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none">
+                <option value="newest">Newest</option>
+                <option value="price_low">Price: Low → High</option>
+                <option value="price_high">Price: High → Low</option>
+                <option value="rating">Top Rated</option>
               </select>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -230,7 +284,7 @@ export default function BuyerMarketplace() {
             ) : filteredInventory.map((item) => (
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="bg-card border border-border rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all cursor-pointer"
-                onClick={() => setSelectedProduct(item)}>
+                onClick={() => { setSelectedProduct(item); fetchProductReviews(item.id); }}>
                 {/* Product Image */}
                 {item.image_url ? (
                   <div className="w-full h-40 bg-muted">
@@ -257,6 +311,14 @@ export default function BuyerMarketplace() {
                     </div>
                   </div>
                   {item.description && <p className="text-xs text-muted-foreground mb-3">{item.description}</p>}
+                  {reviews[item.id] && (
+                    <div className="flex items-center gap-1 mb-3">
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(reviews[item.id].avg) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                      ))}
+                      <span className="text-xs text-muted-foreground ml-1">({reviews[item.id].count})</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-lg font-display font-bold text-emerald">TZS {item.price_per_unit.toLocaleString()}</p>
@@ -335,6 +397,59 @@ export default function BuyerMarketplace() {
                       className="flex-1 bg-emerald text-accent-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-light transition-colors">
                       Add to Cart
                     </button>
+                  )}
+                </div>
+
+                {/* Reviews Section */}
+                <div className="border-t border-border pt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-display font-semibold text-sm">Reviews</h4>
+                    {reviews[selectedProduct.id] && (
+                      <div className="flex items-center gap-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(reviews[selectedProduct.id].avg) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                        ))}
+                        <span className="text-xs text-muted-foreground ml-1">{reviews[selectedProduct.id].avg.toFixed(1)} ({reviews[selectedProduct.id].count})</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Write a review */}
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Write a review (delivered orders only)</p>
+                    <div className="flex items-center gap-1">
+                      {[1,2,3,4,5].map(s => (
+                        <button key={s} onClick={() => setReviewForm(f => ({ ...f, rating: s }))}>
+                          <Star className={`w-5 h-5 ${s <= reviewForm.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <input value={reviewForm.comment} onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
+                      placeholder="Optional comment..." className="w-full bg-card border border-border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
+                    <button onClick={() => submitReview(selectedProduct.id)}
+                      className="bg-emerald text-accent-foreground px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-light transition-colors">
+                      Submit Review
+                    </button>
+                  </div>
+
+                  {/* Existing reviews */}
+                  {productReviews.length > 0 && (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {productReviews.map((r: any) => (
+                        <div key={r.id} className="bg-card border border-border rounded-lg p-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              {[1,2,3,4,5].map(s => (
+                                <Star key={s} className={`w-3 h-3 ${s <= r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                              ))}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                          </div>
+                          {r.comment && <p className="text-xs text-foreground mt-1">{r.comment}</p>}
+                          <p className="text-xs text-muted-foreground mt-0.5">{(r.profiles as any)?.full_name || "Buyer"}</p>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
