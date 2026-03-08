@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Truck, Package, MapPin, CheckCircle, Clock, Navigation, Loader2, ChevronDown } from "lucide-react";
+import { Truck, Package, MapPin, CheckCircle, Clock, Navigation, Loader2, ChevronDown, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
   { title: "Deliveries", url: "/dashboard/distributor", icon: Truck },
   { title: "Route Map", url: "/dashboard/distributor/routes", icon: Navigation },
+  { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
 function KPICard({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: React.ElementType; color: string }) {
