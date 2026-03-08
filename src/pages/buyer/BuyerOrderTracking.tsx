@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ShoppingCart, ShoppingBag, MapPin, Heart, MessageSquare, Settings, Loader2, Clock, CheckCircle, Truck, Package, XCircle } from "lucide-react";
+import { ShoppingCart, ShoppingBag, MapPin, Heart, MessageSquare, Settings, Loader2, Clock, CheckCircle, Truck, Package, XCircle, Timer } from "lucide-react";
+import { estimateEtaMinutes } from "@/lib/routeOptimizer";
 
 const navItems = [
   { title: "Marketplace", url: "/dashboard/buyer", icon: ShoppingCart },
