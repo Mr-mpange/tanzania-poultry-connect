@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings } from "lucide-react";
+import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings, Search } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 
@@ -79,9 +79,26 @@ export default function AdminDashboard() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [userSearch, setUserSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const isUsersPage = window.location.pathname.includes("/users");
   const isOrdersPage = window.location.pathname.includes("/orders") && window.location.pathname.includes("/admin");
+
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      const matchesSearch = !userSearch || 
+        (u.full_name || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+        (u.phone || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+        (u.location || "").toLowerCase().includes(userSearch.toLowerCase());
+      const matchesRole = !roleFilter || u.role === roleFilter;
+      const matchesStatus = !statusFilter || 
+        (statusFilter === "active" && u.is_approved) || 
+        (statusFilter === "inactive" && !u.is_approved);
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, userSearch, roleFilter, statusFilter]);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -171,7 +188,41 @@ export default function AdminDashboard() {
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
       ) : isUsersPage ? (
         <div className="space-y-4">
-          <h2 className="font-display font-semibold text-lg text-foreground">All Users ({users.length})</h2>
+          <h2 className="font-display font-semibold text-lg text-foreground">All Users ({filteredUsers.length})</h2>
+          
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                placeholder="Search by name, phone, or location…"
+                className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+              />
+            </div>
+            <select
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+            >
+              <option value="">All Roles</option>
+              <option value="farmer">Farmer</option>
+              <option value="buyer">Buyer</option>
+              <option value="distributor">Distributor</option>
+              <option value="admin">Admin</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
           <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -187,7 +238,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
+                  {filteredUsers.map((u) => (
                     <tr key={u.id} className="border-b border-border hover:bg-muted/30">
                       <td className="p-3 font-medium text-foreground">{u.full_name || "—"}</td>
                       <td className="p-3"><span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full capitalize">{u.role}</span></td>

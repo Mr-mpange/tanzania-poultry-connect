@@ -2,12 +2,13 @@ import { ReactNode, useState, useRef, useEffect } from "react";
 import { NavLink as RouterNavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar
 } from "@/components/ui/sidebar";
-import { Leaf, LogOut, User, Bell } from "lucide-react";
+import { Leaf, LogOut, User, Bell, Sun, Moon } from "lucide-react";
 
 interface NavItem {
   title: string;
@@ -70,6 +71,14 @@ function NotificationBell() {
         </div>
       )}
     </div>
+  );
+}
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  return (
+    <button onClick={toggle} className="p-2 rounded-lg hover:bg-muted transition-colors mr-1" title="Toggle theme">
+      {theme === "dark" ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
+    </button>
   );
 }
 
@@ -139,6 +148,7 @@ export default function DashboardLayout({ children, navItems, title }: Dashboard
           <header className="h-14 flex items-center border-b border-border px-4 bg-card">
             <SidebarTrigger className="mr-4" />
             <h1 className="font-display font-semibold text-foreground text-lg flex-1">{title}</h1>
+            <ThemeToggle />
             <NotificationBell />
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto">
