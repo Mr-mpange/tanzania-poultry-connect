@@ -64,6 +64,35 @@ export type Database = {
           },
         ]
       }
+      favorites: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           category: Database["public"]["Enums"]["product_category"]
@@ -115,6 +144,33 @@ export type Database = {
           updated_at?: string
           vaccination_status?: string | null
           weight_kg?: number | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id?: string
+          sender_id?: string
         }
         Relationships: []
       }
@@ -259,6 +315,42 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          capacity_kg: number
+          created_at: string
+          distributor_id: string
+          id: string
+          is_active: boolean
+          plate_number: string
+          updated_at: string
+          vehicle_name: string
+          vehicle_type: string
+        }
+        Insert: {
+          capacity_kg?: number
+          created_at?: string
+          distributor_id: string
+          id?: string
+          is_active?: boolean
+          plate_number: string
+          updated_at?: string
+          vehicle_name: string
+          vehicle_type?: string
+        }
+        Update: {
+          capacity_kg?: number
+          created_at?: string
+          distributor_id?: string
+          id?: string
+          is_active?: boolean
+          plate_number?: string
+          updated_at?: string
+          vehicle_name?: string
+          vehicle_type?: string
         }
         Relationships: []
       }
