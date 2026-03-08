@@ -356,6 +356,9 @@ export default function FarmerDashboard() {
           </div>
         )}
 
+        {/* Price History Chart */}
+        <PriceHistoryChart inventoryItems={inventory.map(i => ({ id: i.id, product_name: i.product_name }))} />
+
         {/* Recent Reviews Widget */}
         {recentReviews.length > 0 && (
           <div className="bg-card border border-border rounded-xl p-5 shadow-card">
