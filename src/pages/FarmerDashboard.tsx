@@ -167,6 +167,11 @@ export default function FarmerDashboard() {
 
   const totalStock = inventory.reduce((s, i) => s + i.quantity, 0);
   const totalValue = inventory.reduce((s, i) => s + i.quantity * i.price_per_unit, 0);
+  const avgRating = recentReviews.length > 0
+    ? (recentReviews.reduce((s, r) => s + r.rating, 0) / recentReviews.length).toFixed(1)
+    : "—";
+  const totalPages = Math.ceil(inventory.length / PAGE_SIZE);
+  const paginatedInventory = inventory.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   if (loading) {
     return (
