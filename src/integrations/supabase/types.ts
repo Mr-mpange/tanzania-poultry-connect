@@ -267,6 +267,38 @@ export type Database = {
         }
         Relationships: []
       }
+      price_history: {
+        Row: {
+          farmer_id: string
+          id: string
+          inventory_id: string
+          price: number
+          recorded_at: string
+        }
+        Insert: {
+          farmer_id: string
+          id?: string
+          inventory_id: string
+          price: number
+          recorded_at?: string
+        }
+        Update: {
+          farmer_id?: string
+          id?: string
+          inventory_id?: string
+          price?: number
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_history_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
