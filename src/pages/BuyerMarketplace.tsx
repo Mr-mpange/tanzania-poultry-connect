@@ -311,6 +311,14 @@ export default function BuyerMarketplace() {
                     </div>
                   </div>
                   {item.description && <p className="text-xs text-muted-foreground mb-3">{item.description}</p>}
+                  {reviews[item.id] && (
+                    <div className="flex items-center gap-1 mb-3">
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(reviews[item.id].avg) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                      ))}
+                      <span className="text-xs text-muted-foreground ml-1">({reviews[item.id].count})</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-lg font-display font-bold text-emerald">TZS {item.price_per_unit.toLocaleString()}</p>
