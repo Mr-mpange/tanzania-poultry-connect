@@ -328,6 +328,7 @@ export default function FarmerDashboard() {
                         </div>
                       )}
                     </td>
+                    <td className="p-3 font-medium text-foreground">{item.product_name}</td>
                     <td className="p-3"><span className="bg-secondary/10 text-secondary text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span></td>
                     <td className="p-3 text-foreground">{item.quantity} {item.unit}</td>
                     <td className="p-3 text-foreground">TZS {item.price_per_unit.toLocaleString()}</td>
