@@ -227,38 +227,58 @@ export default function BuyerMarketplace() {
               <div className="col-span-full text-center py-16 text-muted-foreground">No products found</div>
             ) : filteredInventory.map((item) => (
               <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="bg-card border border-border rounded-xl p-5 shadow-card hover:shadow-elevated transition-all">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-display font-semibold text-foreground">{item.product_name}</h3>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <MapPin className="w-3 h-3" /> {item.location || "Unknown"} · <Package className="w-3 h-3" /> {(item.profiles as any)?.full_name || "Farmer"}
-                    </p>
+                className="bg-card border border-border rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all">
+                {/* Product Image */}
+                {item.image_url ? (
+                  <div className="w-full h-40 bg-muted">
+                    <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => toggleFavorite(item.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
-                      <Heart className={`w-4 h-4 ${favoriteIds.has(item.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
-                    </button>
-                    <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span>
+                ) : (
+                  <div className="w-full h-40 bg-muted flex items-center justify-center">
+                    <Package className="w-10 h-10 text-muted-foreground/40" />
                   </div>
-                </div>
-                {item.description && <p className="text-xs text-muted-foreground mb-3">{item.description}</p>}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-display font-bold text-emerald">TZS {item.price_per_unit.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{item.quantity} {item.unit} available</p>
-                  </div>
-                  {cart[item.id] ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded-lg">{cart[item.id]} in cart</span>
-                      <button onClick={() => removeFromCart(item.id)} className="text-xs text-destructive hover:underline">Remove</button>
+                )}
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-display font-semibold text-foreground">{item.product_name}</h3>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        <MapPin className="w-3 h-3" /> {item.location || "Unknown"} · <Package className="w-3 h-3" /> {(item.profiles as any)?.full_name || "Farmer"}
+                      </p>
                     </div>
-                  ) : (
-                    <button onClick={() => addToCart(item.id)}
-                      className="bg-emerald text-accent-foreground px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-light transition-colors">
-                      Add to Cart
-                    </button>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => toggleFavorite(item.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                        <Heart className={`w-4 h-4 ${favoriteIds.has(item.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
+                      </button>
+                      <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{item.category}</span>
+                    </div>
+                  </div>
+                  {item.description && <p className="text-xs text-muted-foreground mb-3">{item.description}</p>}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-display font-bold text-emerald">TZS {item.price_per_unit.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{item.quantity} {item.unit} available</p>
+                    </div>
+                    {cart[item.id] ? (
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => decreaseQty(item.id)}
+                          className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
+                          <Minus className="w-3.5 h-3.5 text-foreground" />
+                        </button>
+                        <span className="text-sm font-semibold text-foreground w-6 text-center">{cart[item.id]}</span>
+                        <button onClick={() => addToCart(item.id)}
+                          className="w-7 h-7 rounded-lg bg-emerald flex items-center justify-center hover:bg-emerald-light transition-colors">
+                          <Plus className="w-3.5 h-3.5 text-accent-foreground" />
+                        </button>
+                        <button onClick={() => removeFromCart(item.id)} className="text-xs text-destructive hover:underline ml-1">✕</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => addToCart(item.id)}
+                        className="bg-emerald text-accent-foreground px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-light transition-colors">
+                        Add to Cart
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             ))}

@@ -130,6 +130,8 @@ export default function FarmerDashboard() {
       location: item.location || "", health_status: item.health_status || "healthy",
       vaccination_status: item.vaccination_status || "", weight_kg: item.weight_kg || 0,
     });
+    setImageFile(null);
+    setImagePreview(item.image_url || null);
     setShowForm(true);
   };
 
