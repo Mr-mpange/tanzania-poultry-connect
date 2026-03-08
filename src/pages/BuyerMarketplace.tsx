@@ -6,6 +6,31 @@ import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Ch
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
+const useFavorites = (userId: string | undefined) => {
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from("favorites").select("inventory_id").eq("user_id", userId)
+      .then(({ data }) => setFavoriteIds(new Set((data || []).map(f => f.inventory_id))));
+  }, [userId]);
+
+  const toggle = async (inventoryId: string) => {
+    if (!userId) return;
+    if (favoriteIds.has(inventoryId)) {
+      await supabase.from("favorites").delete().eq("user_id", userId).eq("inventory_id", inventoryId);
+      setFavoriteIds(prev => { const n = new Set(prev); n.delete(inventoryId); return n; });
+      toast.success("Removed from favorites");
+    } else {
+      await supabase.from("favorites").insert({ user_id: userId, inventory_id: inventoryId } as any);
+      setFavoriteIds(prev => new Set(prev).add(inventoryId));
+      toast.success("Added to favorites");
+    }
+  };
+
+  return { favoriteIds, toggle };
+};
+
 const navItems = [
   { title: "Marketplace", url: "/dashboard/buyer", icon: ShoppingCart },
   { title: "My Orders", url: "/dashboard/buyer/orders", icon: ShoppingBag },
