@@ -173,6 +173,8 @@ export default function FarmerDashboard() {
   const avgRating = recentReviews.length > 0
     ? (recentReviews.reduce((s, r) => s + r.rating, 0) / recentReviews.length).toFixed(1)
     : "—";
+  const lowStockItems = inventory.filter(i => i.quantity > 0 && i.quantity <= lowStockThreshold);
+  const outOfStockItems = inventory.filter(i => i.quantity === 0);
   const filteredInventory = inventory.filter(i => {
     const q = searchQuery.toLowerCase();
     return !q || i.product_name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q);
