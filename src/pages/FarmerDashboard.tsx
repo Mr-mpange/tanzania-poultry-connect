@@ -51,6 +51,8 @@ export default function FarmerDashboard() {
     price_per_unit: 0, description: "", location: "", health_status: "healthy",
     vaccination_status: "", weight_kg: 0,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
