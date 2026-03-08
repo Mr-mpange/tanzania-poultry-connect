@@ -2,13 +2,16 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings } from "lucide-react";
+import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
   { title: "Marketplace", url: "/dashboard/buyer", icon: ShoppingCart },
   { title: "My Orders", url: "/dashboard/buyer/orders", icon: ShoppingBag },
+  { title: "Order Tracking", url: "/dashboard/buyer/tracking", icon: MapPin },
+  { title: "Favorites", url: "/dashboard/buyer/favorites", icon: Heart },
+  { title: "Messages", url: "/dashboard/buyer/messages", icon: MessageSquare },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 

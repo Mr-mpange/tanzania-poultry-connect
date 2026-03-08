@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings, Search } from "lucide-react";
+import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings, Search, FileText, Sliders } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 
@@ -9,6 +9,9 @@ const navItems = [
   { title: "Overview", url: "/dashboard/admin", icon: BarChart3 },
   { title: "Users", url: "/dashboard/admin/users", icon: Users },
   { title: "Orders", url: "/dashboard/admin/orders", icon: ShoppingCart },
+  { title: "Reports", url: "/dashboard/admin/reports", icon: FileText },
+  { title: "Analytics", url: "/dashboard/admin/analytics", icon: TrendingUp },
+  { title: "Platform", url: "/dashboard/admin/platform", icon: Sliders },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 

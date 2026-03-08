@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Package, ShoppingCart, Truck, BarChart3, Settings, Users,
-  ArrowRight, Leaf, TrendingUp, MapPin
+  ArrowRight, Leaf, TrendingUp, MapPin, DollarSign, MessageSquare,
+  Heart, Car
 } from "lucide-react";
 
 interface QuickAction {
@@ -21,25 +22,28 @@ const roleConfig: Record<string, { greeting: string; subtitle: string; actions: 
     actions: [
       { label: "My Inventory", description: "Add or manage your products", icon: Package, path: "/dashboard/farmer", color: "bg-secondary/10 text-secondary" },
       { label: "Orders", description: "View and process incoming orders", icon: ShoppingCart, path: "/dashboard/farmer/orders", color: "bg-blue-100 text-blue-600" },
-      { label: "Profile Settings", description: "Update your profile info", icon: Settings, path: "/dashboard/settings", color: "bg-muted text-muted-foreground" },
+      { label: "Analytics", description: "View sales and revenue reports", icon: BarChart3, path: "/dashboard/farmer/analytics", color: "bg-amber-100 text-amber-600" },
+      { label: "Earnings", description: "Track your earnings and payments", icon: DollarSign, path: "/dashboard/farmer/earnings", color: "bg-purple-100 text-purple-600" },
     ],
   },
   buyer: {
     greeting: "Welcome back, Buyer",
-    subtitle: "Browse the marketplace and track your orders.",
+    subtitle: "Browse the marketplace, track orders, and save favorites.",
     actions: [
       { label: "Marketplace", description: "Browse products from local farmers", icon: ShoppingCart, path: "/dashboard/buyer", color: "bg-secondary/10 text-secondary" },
-      { label: "My Orders", description: "Track your order history", icon: Package, path: "/dashboard/buyer/orders", color: "bg-blue-100 text-blue-600" },
-      { label: "Profile Settings", description: "Update your profile info", icon: Settings, path: "/dashboard/settings", color: "bg-muted text-muted-foreground" },
+      { label: "Order Tracking", description: "Track your active deliveries", icon: MapPin, path: "/dashboard/buyer/tracking", color: "bg-blue-100 text-blue-600" },
+      { label: "Favorites", description: "View your saved products", icon: Heart, path: "/dashboard/buyer/favorites", color: "bg-pink-100 text-pink-600" },
+      { label: "Messages", description: "Chat with farmers", icon: MessageSquare, path: "/dashboard/buyer/messages", color: "bg-amber-100 text-amber-600" },
     ],
   },
   distributor: {
     greeting: "Welcome back, Driver",
-    subtitle: "Claim deliveries and manage your routes.",
+    subtitle: "Claim deliveries, manage vehicles, and track earnings.",
     actions: [
       { label: "Deliveries", description: "View and claim available deliveries", icon: Truck, path: "/dashboard/distributor", color: "bg-secondary/10 text-secondary" },
-      { label: "Route Map", description: "Plan your delivery routes", icon: MapPin, path: "/dashboard/distributor/routes", color: "bg-amber-100 text-amber-600" },
-      { label: "Profile Settings", description: "Update your profile info", icon: Settings, path: "/dashboard/settings", color: "bg-muted text-muted-foreground" },
+      { label: "Earnings", description: "View delivery history and earnings", icon: DollarSign, path: "/dashboard/distributor/earnings", color: "bg-blue-100 text-blue-600" },
+      { label: "Vehicles", description: "Manage your vehicles", icon: Car, path: "/dashboard/distributor/vehicles", color: "bg-amber-100 text-amber-600" },
+      { label: "Messages", description: "Communicate with farmers & buyers", icon: MessageSquare, path: "/dashboard/distributor/messages", color: "bg-purple-100 text-purple-600" },
     ],
   },
   admin: {
@@ -48,8 +52,8 @@ const roleConfig: Record<string, { greeting: string; subtitle: string; actions: 
     actions: [
       { label: "Overview", description: "Platform analytics & charts", icon: BarChart3, path: "/dashboard/admin", color: "bg-secondary/10 text-secondary" },
       { label: "Users", description: "Manage and approve users", icon: Users, path: "/dashboard/admin/users", color: "bg-blue-100 text-blue-600" },
-      { label: "Orders", description: "Review all platform orders", icon: ShoppingCart, path: "/dashboard/admin/orders", color: "bg-amber-100 text-amber-600" },
-      { label: "Profile Settings", description: "Update your profile info", icon: Settings, path: "/dashboard/settings", color: "bg-muted text-muted-foreground" },
+      { label: "Advanced Analytics", description: "Detailed reports with filters", icon: TrendingUp, path: "/dashboard/admin/analytics", color: "bg-amber-100 text-amber-600" },
+      { label: "Platform Settings", description: "Configure fees and notifications", icon: Settings, path: "/dashboard/admin/platform", color: "bg-purple-100 text-purple-600" },
     ],
   },
 };
