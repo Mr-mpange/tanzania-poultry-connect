@@ -48,6 +48,7 @@ export default function FarmerDashboard() {
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lowStockThreshold, setLowStockThreshold] = useState(10);
   const PAGE_SIZE = 10;
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
