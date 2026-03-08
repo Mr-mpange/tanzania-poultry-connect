@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Package, ShoppingCart, TrendingUp, Egg, Plus, Pencil, Trash2, X, Loader2, CheckCircle, XCircle, Truck, Settings, BarChart3, DollarSign, MessageSquare, ImageIcon, Star, ChevronLeft, ChevronRight, Search, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import PriceHistoryChart from "@/components/farmer/PriceHistoryChart";
 
 const navItems = [
   { title: "Inventory", url: "/dashboard/farmer", icon: Package },
