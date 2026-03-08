@@ -15,16 +15,10 @@ import BuyerMarketplace from "./pages/BuyerMarketplace";
 import AdminDashboard from "./pages/AdminDashboard";
 import DistributorDashboard from "./pages/DistributorDashboard";
 import ProfileSettings from "./pages/ProfileSettings";
+import WelcomeDashboard from "./pages/WelcomeDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-
-function DashboardRedirect() {
-  const { role, loading } = useAuth();
-  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="w-8 h-8 border-4 border-secondary border-t-transparent rounded-full animate-spin" /></div>;
-  if (!role) return <Navigate to="/auth" replace />;
-  return <Navigate to={`/dashboard/${role}`} replace />;
-}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
