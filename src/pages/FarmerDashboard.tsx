@@ -172,8 +172,47 @@ export default function FarmerDashboard() {
   const avgRating = recentReviews.length > 0
     ? (recentReviews.reduce((s, r) => s + r.rating, 0) / recentReviews.length).toFixed(1)
     : "—";
-  const totalPages = Math.ceil(inventory.length / PAGE_SIZE);
-  const paginatedInventory = inventory.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const filteredInventory = inventory.filter(i => {
+    const q = searchQuery.toLowerCase();
+    return !q || i.product_name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q);
+  });
+  const totalPages = Math.ceil(filteredInventory.length / PAGE_SIZE);
+  const paginatedInventory = filteredInventory.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedInventory.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedInventory.map(i => i.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("inventory").delete().in("id", ids);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Deleted ${ids.length} item(s)`);
+    setSelectedIds(new Set());
+    fetchData();
+  };
+
+  const handleBulkToggleAvailability = async (available: boolean) => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("inventory").update({ is_available: available }).in("id", ids);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Updated ${ids.length} item(s)`);
+    setSelectedIds(new Set());
+    fetchData();
+  };
 
   if (loading) {
     return (
