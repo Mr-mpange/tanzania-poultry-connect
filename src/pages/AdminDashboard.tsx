@@ -188,7 +188,41 @@ export default function AdminDashboard() {
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
       ) : isUsersPage ? (
         <div className="space-y-4">
-          <h2 className="font-display font-semibold text-lg text-foreground">All Users ({users.length})</h2>
+          <h2 className="font-display font-semibold text-lg text-foreground">All Users ({filteredUsers.length})</h2>
+          
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                placeholder="Search by name, phone, or location…"
+                className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+              />
+            </div>
+            <select
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+            >
+              <option value="">All Roles</option>
+              <option value="farmer">Farmer</option>
+              <option value="buyer">Buyer</option>
+              <option value="distributor">Distributor</option>
+              <option value="admin">Admin</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
           <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
