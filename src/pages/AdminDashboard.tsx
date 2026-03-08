@@ -79,9 +79,26 @@ export default function AdminDashboard() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [userSearch, setUserSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const isUsersPage = window.location.pathname.includes("/users");
   const isOrdersPage = window.location.pathname.includes("/orders") && window.location.pathname.includes("/admin");
+
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      const matchesSearch = !userSearch || 
+        (u.full_name || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+        (u.phone || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+        (u.location || "").toLowerCase().includes(userSearch.toLowerCase());
+      const matchesRole = !roleFilter || u.role === roleFilter;
+      const matchesStatus = !statusFilter || 
+        (statusFilter === "active" && u.is_approved) || 
+        (statusFilter === "inactive" && !u.is_approved);
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, userSearch, roleFilter, statusFilter]);
 
   useEffect(() => { fetchAll(); }, []);
 
