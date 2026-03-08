@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings } from "lucide-react";
+import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings, Search } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 
