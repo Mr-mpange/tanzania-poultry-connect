@@ -480,7 +480,7 @@ export default function FarmerDashboard() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-border">
               <p className="text-xs text-muted-foreground">
-                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, inventory.length)} of {inventory.length}
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredInventory.length)} of {filteredInventory.length}
               </p>
               <div className="flex items-center gap-1">
                 <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
