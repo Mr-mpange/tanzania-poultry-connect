@@ -33,6 +33,7 @@ import DistributorDashboard from "./pages/DistributorDashboard";
 import DistributorEarnings from "./pages/distributor/DistributorEarnings";
 import DistributorMessages from "./pages/distributor/DistributorMessages";
 import VehicleManagement from "./pages/distributor/VehicleManagement";
+import DeliveryTrackingMap from "./pages/distributor/DeliveryTrackingMap";
 
 // Admin
 import AdminDashboard from "./pages/AdminDashboard";
@@ -74,7 +75,7 @@ const App = () => (
 
               {/* Distributor */}
               <Route path="/dashboard/distributor" element={<ProtectedRoute allowedRoles={["distributor"]}><DistributorDashboard /></ProtectedRoute>} />
-              <Route path="/dashboard/distributor/routes" element={<ProtectedRoute allowedRoles={["distributor"]}><DistributorDashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/distributor/routes" element={<ProtectedRoute allowedRoles={["distributor"]}><DeliveryTrackingMap /></ProtectedRoute>} />
               <Route path="/dashboard/distributor/earnings" element={<ProtectedRoute allowedRoles={["distributor"]}><DistributorEarnings /></ProtectedRoute>} />
               <Route path="/dashboard/distributor/messages" element={<ProtectedRoute allowedRoles={["distributor"]}><DistributorMessages /></ProtectedRoute>} />
               <Route path="/dashboard/distributor/vehicles" element={<ProtectedRoute allowedRoles={["distributor"]}><VehicleManagement /></ProtectedRoute>} />

@@ -17,10 +17,13 @@ export type Database = {
       deliveries: {
         Row: {
           created_at: string
+          current_lat: number | null
+          current_lng: number | null
           delivered_at: string | null
           delivery_location: string | null
           distributor_id: string
           id: string
+          last_location_update: string | null
           notes: string | null
           order_id: string
           picked_up_at: string | null
@@ -30,10 +33,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_lat?: number | null
+          current_lng?: number | null
           delivered_at?: string | null
           delivery_location?: string | null
           distributor_id: string
           id?: string
+          last_location_update?: string | null
           notes?: string | null
           order_id: string
           picked_up_at?: string | null
@@ -43,10 +49,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_lat?: number | null
+          current_lng?: number | null
           delivered_at?: string | null
           delivery_location?: string | null
           distributor_id?: string
           id?: string
+          last_location_update?: string | null
           notes?: string | null
           order_id?: string
           picked_up_at?: string | null
