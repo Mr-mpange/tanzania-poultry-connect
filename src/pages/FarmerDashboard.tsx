@@ -304,6 +304,57 @@ export default function FarmerDashboard() {
           <KPICard label="Avg Rating" value={avgRating} icon={Star} color="bg-amber-100 text-amber-500" />
         </div>
 
+        {/* Low Stock Alerts */}
+        {(lowStockItems.length > 0 || outOfStockItems.length > 0) && (
+          <div className="bg-card border border-border rounded-xl p-5 shadow-card">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display font-semibold text-lg text-foreground flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" /> Stock Alerts
+              </h2>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground">Threshold:</label>
+                <input type="number" min={1} max={100} value={lowStockThreshold}
+                  onChange={e => setLowStockThreshold(Math.max(1, +e.target.value))}
+                  className="w-16 bg-muted border border-border rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-ring focus:outline-none" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              {outOfStockItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                      <XCircle className="w-4 h-4 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.product_name}</p>
+                      <p className="text-xs text-destructive">Out of stock</p>
+                    </div>
+                  </div>
+                  <button onClick={() => openEdit(item)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors">
+                    Restock
+                  </button>
+                </div>
+              ))}
+              {lowStockItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.product_name}</p>
+                      <p className="text-xs text-amber-600">Only {item.quantity} {item.unit} left</p>
+                    </div>
+                  </div>
+                  <button onClick={() => openEdit(item)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors">
+                    Restock
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Recent Reviews Widget */}
         {recentReviews.length > 0 && (
           <div className="bg-card border border-border rounded-xl p-5 shadow-card">
