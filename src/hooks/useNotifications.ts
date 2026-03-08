@@ -55,6 +55,16 @@ export function useNotifications() {
           }
         }
       })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "reviews" }, async (payload) => {
+        const review = payload.new as any;
+        if (role === "farmer") {
+          // Check if the reviewed product belongs to this farmer
+          const { data: inv } = await supabase.from("inventory").select("product_name, farmer_id").eq("id", review.inventory_id).maybeSingle();
+          if (inv && inv.farmer_id === user.id) {
+            addNotification(`New ${review.rating}★ review on "${inv.product_name}"`, review.comment || undefined);
+          }
+        }
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };

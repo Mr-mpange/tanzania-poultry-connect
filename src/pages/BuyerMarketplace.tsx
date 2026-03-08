@@ -211,9 +211,36 @@ export default function BuyerMarketplace() {
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
       ) : isOrdersPage ? (
         <div className="space-y-4">
-          {orders.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">No orders yet. Browse the marketplace!</div>
-          ) : orders.map((order) => (
+          {/* Order Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input value={orderSearch} onChange={e => setOrderSearch(e.target.value)} placeholder="Search orders..."
+                className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
+            </div>
+            <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}
+              className="bg-card border border-border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="processing">Processing</option>
+              <option value="in_transit">In Transit</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          {orders.filter(o => {
+            const matchSearch = !orderSearch || o.order_number.toLowerCase().includes(orderSearch.toLowerCase());
+            const matchStatus = !orderStatusFilter || o.status === orderStatusFilter;
+            return matchSearch && matchStatus;
+          }).length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">No orders found.</div>
+          ) : orders.filter(o => {
+            const matchSearch = !orderSearch || o.order_number.toLowerCase().includes(orderSearch.toLowerCase());
+            const matchStatus = !orderStatusFilter || o.status === orderStatusFilter;
+            return matchSearch && matchStatus;
+          }).map((order) => (
             <div key={order.id} className="bg-card border border-border rounded-xl p-5 shadow-card">
               <div className="flex justify-between items-start">
                 <div>
