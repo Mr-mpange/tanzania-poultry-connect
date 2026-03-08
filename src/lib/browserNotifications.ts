@@ -48,13 +48,12 @@ export function sendBrowserNotification(
   const body = STATUS_MESSAGES[status] || `Status updated to: ${status.replace("_", " ")}`;
 
   try {
-    new Notification(`${emoji} Order #${orderNumber}`, {
+    const options: NotificationOptions & Record<string, unknown> = {
       body,
       icon: "/favicon.ico",
-      badge: "/favicon.ico",
       tag: `order-${orderNumber}-${status}`,
-      renotify: true,
-    });
+    };
+    new Notification(`${emoji} Order #${orderNumber}`, options);
   } catch {
     // Silent fail on environments that don't support Notification constructor
   }
