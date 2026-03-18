@@ -4,6 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Truck, Navigation, DollarSign, MessageSquare, Car, Settings, Loader2, MapPin, Radio } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+// Cast react-leaflet components to any to avoid v5 type mismatches
+const AnyMapContainer = MapContainer as any;
+const AnyTileLayer = TileLayer as any;
+const AnyMarker = Marker as any;
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
