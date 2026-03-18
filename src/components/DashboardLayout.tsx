@@ -68,6 +68,12 @@ function NotificationBell() {
               ))
             )}
           </div>
+          <div className="px-4 py-2 border-t border-border">
+            <Link to="/dashboard/notifications" onClick={() => setOpen(false)}
+              className="flex items-center gap-1.5 text-xs text-secondary hover:underline">
+              <Settings2 className="w-3 h-3" /> Notification preferences
+            </Link>
+          </div>
         </div>
       )}
     </div>
