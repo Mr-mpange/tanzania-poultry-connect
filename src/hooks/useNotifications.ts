@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { sendBrowserNotification } from "@/lib/browserNotifications";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
 
 export interface AppNotification {
   id: string;
