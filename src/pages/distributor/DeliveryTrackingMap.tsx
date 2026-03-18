@@ -172,7 +172,9 @@ export default function DeliveryTrackingMap() {
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>
         ) : (
           <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card" style={{ height: "500px" }}>
+            {/* @ts-ignore - react-leaflet v5 type mismatch */}
             <MapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+              {/* @ts-ignore */}
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
