@@ -209,15 +209,15 @@ export default function DeliveryTrackingMap() {
                         <p className="text-xs">Amount: TZS {d.orders.total_amount.toLocaleString()}</p>
                       )}
                       {d.last_location_update && (
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-muted-foreground">
                           Updated: {new Date(d.last_location_update).toLocaleTimeString()}
                         </p>
                       )}
                     </div>
                   </Popup>
-                </Marker>
+                </AnyMarker>
               ))}
-            </MapContainer>
+            </AnyMapContainer>
           </div>
         )}
 
