@@ -14,6 +14,7 @@ export interface AppNotification {
 
 export function useNotifications() {
   const { user, role } = useAuth();
+  const { preferences } = useNotificationPreferences();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const addNotification = useCallback((message: string, detail?: string) => {
