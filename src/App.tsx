@@ -40,6 +40,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminAdvancedAnalytics from "./pages/admin/AdminAdvancedAnalytics";
 import PlatformSettings from "./pages/admin/PlatformSettings";
+import NotificationPreferences from "./pages/NotificationPreferences";
 
 const queryClient = new QueryClient();
 
