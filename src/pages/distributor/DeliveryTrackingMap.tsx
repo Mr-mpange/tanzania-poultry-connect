@@ -196,6 +196,7 @@ export default function DeliveryTrackingMap() {
               )}
 
               {deliveries.filter(d => d.current_lat && d.current_lng).map(d => (
+                // @ts-ignore
                 <Marker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
                   <Popup>
                     <div className="text-sm space-y-1">
