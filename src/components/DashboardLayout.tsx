@@ -1,5 +1,5 @@
 import { ReactNode, useState, useRef, useEffect } from "react";
-import { NavLink as RouterNavLink, useNavigate } from "react-router-dom";
+import { NavLink as RouterNavLink, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import { useTheme } from "@/hooks/useTheme";
@@ -8,7 +8,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar
 } from "@/components/ui/sidebar";
-import { Leaf, LogOut, User, Bell, Sun, Moon } from "lucide-react";
+import { Leaf, LogOut, User, Bell, Sun, Moon, Settings2 } from "lucide-react";
 
 interface NavItem {
   title: string;
