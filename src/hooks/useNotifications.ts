@@ -74,7 +74,7 @@ export function useNotifications() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, role, addNotification]);
+  }, [user, role, addNotification, preferences]);
 
   return { notifications, unreadCount, markRead, markAllRead };
 }
