@@ -40,6 +40,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminAdvancedAnalytics from "./pages/admin/AdminAdvancedAnalytics";
 import PlatformSettings from "./pages/admin/PlatformSettings";
+import NotificationPreferences from "./pages/NotificationPreferences";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute><WelcomeDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+              <Route path="/dashboard/notifications" element={<ProtectedRoute><NotificationPreferences /></ProtectedRoute>} />
 
               {/* Farmer */}
               <Route path="/dashboard/farmer" element={<ProtectedRoute allowedRoles={["farmer"]}><FarmerDashboard /></ProtectedRoute>} />

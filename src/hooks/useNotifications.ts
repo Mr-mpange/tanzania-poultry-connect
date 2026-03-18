@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { sendBrowserNotification } from "@/lib/browserNotifications";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
 
 export interface AppNotification {
   id: string;
@@ -13,6 +14,7 @@ export interface AppNotification {
 
 export function useNotifications() {
   const { user, role } = useAuth();
+  const { preferences } = useNotificationPreferences();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const addNotification = useCallback((message: string, detail?: string) => {
@@ -40,11 +42,12 @@ export function useNotifications() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (payload) => {
         const order = payload.new as any;
         if (role === "farmer" && order.farmer_id === user.id) {
-          addNotification(`New order #${order.order_number}`, `TZS ${order.total_amount?.toLocaleString() || 0}`);
+          if (preferences.inApp.newOrders) addNotification(`New order #${order.order_number}`, `TZS ${order.total_amount?.toLocaleString() || 0}`);
+          if (preferences.browser.newOrders) sendBrowserNotification(order.order_number, "confirmed");
         } else if (role === "admin") {
-          addNotification(`New order #${order.order_number}`, `TZS ${order.total_amount?.toLocaleString() || 0}`);
+          if (preferences.inApp.newOrders) addNotification(`New order #${order.order_number}`, `TZS ${order.total_amount?.toLocaleString() || 0}`);
         } else if (role === "distributor") {
-          addNotification(`New order available: #${order.order_number}`);
+          if (preferences.inApp.newOrders) addNotification(`New order available: #${order.order_number}`);
         }
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (payload) => {
@@ -52,27 +55,26 @@ export function useNotifications() {
         const old = payload.old as any;
         if (order.status !== old.status) {
           if (role === "buyer" && order.buyer_id === user.id) {
-            addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
-            sendBrowserNotification(order.order_number, order.status);
+            if (preferences.inApp.orderUpdates) addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
+            if (preferences.browser.orderUpdates) sendBrowserNotification(order.order_number, order.status);
           } else if (role === "farmer" && order.farmer_id === user.id) {
-            addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
+            if (preferences.inApp.orderUpdates) addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
           }
         }
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "reviews" }, async (payload) => {
         const review = payload.new as any;
         if (role === "farmer") {
-          // Check if the reviewed product belongs to this farmer
           const { data: inv } = await supabase.from("inventory").select("product_name, farmer_id").eq("id", review.inventory_id).maybeSingle();
           if (inv && inv.farmer_id === user.id) {
-            addNotification(`New ${review.rating}★ review on "${inv.product_name}"`, review.comment || undefined);
+            if (preferences.inApp.reviews) addNotification(`New ${review.rating}★ review on "${inv.product_name}"`, review.comment || undefined);
           }
         }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, role, addNotification]);
+  }, [user, role, addNotification, preferences]);
 
   return { notifications, unreadCount, markRead, markAllRead };
 }

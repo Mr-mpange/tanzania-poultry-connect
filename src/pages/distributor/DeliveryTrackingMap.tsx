@@ -4,6 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Truck, Navigation, DollarSign, MessageSquare, Car, Settings, Loader2, MapPin, Radio } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+// Cast react-leaflet components to any to avoid v5 type mismatches
+const AnyMapContainer = MapContainer as any;
+const AnyTileLayer = TileLayer as any;
+const AnyMarker = Marker as any;
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
@@ -172,28 +176,28 @@ export default function DeliveryTrackingMap() {
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>
         ) : (
           <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card" style={{ height: "500px" }}>
-            <MapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
-              <TileLayer
+            <AnyMapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+              <AnyTileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               {markerPositions.length > 0 && <FitBounds positions={markerPositions} />}
 
               {myPosition && (
-                <Marker position={myPosition} icon={deliveryIcon}>
+                <AnyMarker position={myPosition} icon={deliveryIcon}>
                   <Popup>
                     <div className="text-sm">
                       <p className="font-semibold">📍 Your Location</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {myPosition[0].toFixed(5)}, {myPosition[1].toFixed(5)}
                       </p>
                     </div>
                   </Popup>
-                </Marker>
+                </AnyMarker>
               )}
 
               {deliveries.filter(d => d.current_lat && d.current_lng).map(d => (
-                <Marker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
+                <AnyMarker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
                   <Popup>
                     <div className="text-sm space-y-1">
                       <p className="font-semibold">🚚 {d.orders?.order_number || "Delivery"}</p>
@@ -205,15 +209,15 @@ export default function DeliveryTrackingMap() {
                         <p className="text-xs">Amount: TZS {d.orders.total_amount.toLocaleString()}</p>
                       )}
                       {d.last_location_update && (
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-muted-foreground">
                           Updated: {new Date(d.last_location_update).toLocaleTimeString()}
                         </p>
                       )}
                     </div>
                   </Popup>
-                </Marker>
+                </AnyMarker>
               ))}
-            </MapContainer>
+            </AnyMapContainer>
           </div>
         )}
 
