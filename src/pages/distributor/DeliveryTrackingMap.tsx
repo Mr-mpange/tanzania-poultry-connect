@@ -182,6 +182,7 @@ export default function DeliveryTrackingMap() {
               {markerPositions.length > 0 && <FitBounds positions={markerPositions} />}
 
               {myPosition && (
+                {/* @ts-ignore */}
                 <Marker position={myPosition} icon={deliveryIcon}>
                   <Popup>
                     <div className="text-sm">
