@@ -176,32 +176,28 @@ export default function DeliveryTrackingMap() {
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>
         ) : (
           <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card" style={{ height: "500px" }}>
-            {/* @ts-ignore - react-leaflet v5 type mismatch */}
-            <MapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
-              {/* @ts-ignore */}
-              <TileLayer
+            <AnyMapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+              <AnyTileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               {markerPositions.length > 0 && <FitBounds positions={markerPositions} />}
 
               {myPosition && (
-                {/* @ts-ignore */}
-                <Marker position={myPosition} icon={deliveryIcon}>
+                <AnyMarker position={myPosition} icon={deliveryIcon}>
                   <Popup>
                     <div className="text-sm">
                       <p className="font-semibold">📍 Your Location</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {myPosition[0].toFixed(5)}, {myPosition[1].toFixed(5)}
                       </p>
                     </div>
                   </Popup>
-                </Marker>
+                </AnyMarker>
               )}
 
               {deliveries.filter(d => d.current_lat && d.current_lng).map(d => (
-                // @ts-ignore
-                <Marker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
+                <AnyMarker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
                   <Popup>
                     <div className="text-sm space-y-1">
                       <p className="font-semibold">🚚 {d.orders?.order_number || "Delivery"}</p>
