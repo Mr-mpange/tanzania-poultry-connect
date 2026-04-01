@@ -8,6 +8,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 const AnyMapContainer = MapContainer as any;
 const AnyTileLayer = TileLayer as any;
 const AnyMarker = Marker as any;
+const AnyPopup = Popup as any;
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
