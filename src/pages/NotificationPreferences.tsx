@@ -6,7 +6,8 @@ import {
 } from "@/lib/browserNotifications";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bell, BellOff, Monitor, Smartphone, RotateCcw, ShieldAlert } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Bell, BellOff, Monitor, Smartphone, RotateCcw, ShieldAlert, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -17,7 +18,7 @@ const NOTIFICATION_TYPES = [
 ];
 
 export default function NotificationPreferences() {
-  const { preferences, updatePreference, resetToDefaults } = useNotificationPreferences();
+  const { preferences, updatePreference, updatePhone, resetToDefaults } = useNotificationPreferences();
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">(
     getNotificationPermission()
   );
@@ -39,6 +40,8 @@ export default function NotificationPreferences() {
   const browserBlocked = browserPermission === "denied";
   const browserNotSupported = !isNotificationSupported();
   const browserNeedsPermission = browserPermission === "default";
+
+  const hasSmsEnabled = preferences.sms.orderUpdates || preferences.sms.newOrders || preferences.sms.reviews;
 
   return (
     <div className="max-w-lg mx-auto py-8 px-4">
@@ -135,6 +138,55 @@ export default function NotificationPreferences() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* SMS Notifications */}
+      <section className="mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare className="w-4 h-4 text-muted-foreground" />
+          <h2 className="font-semibold text-foreground text-sm uppercase tracking-wide">SMS Notifications</h2>
+        </div>
+
+        <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-border">
+          <Label htmlFor="sms-phone" className="text-sm font-medium text-foreground">
+            Phone number
+          </Label>
+          <p className="text-xs text-muted-foreground mb-2">Enter your phone number with country code (e.g. +255712345678)</p>
+          <Input
+            id="sms-phone"
+            type="tel"
+            placeholder="+255..."
+            value={preferences.smsPhone}
+            onChange={(e) => updatePhone(e.target.value)}
+            className="max-w-xs"
+          />
+        </div>
+
+        <div className="space-y-1">
+          {NOTIFICATION_TYPES.map((type) => (
+            <div
+              key={`sms-${type.key}`}
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <div className="pr-4">
+                <Label htmlFor={`sms-${type.key}`} className="text-sm font-medium text-foreground cursor-pointer">
+                  {type.label}
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
+              </div>
+              <Switch
+                id={`sms-${type.key}`}
+                checked={preferences.sms[type.key]}
+                onCheckedChange={(v) => updatePreference("sms", type.key, v)}
+                disabled={!preferences.smsPhone || preferences.smsPhone.length < 10}
+              />
+            </div>
+          ))}
+        </div>
+
+        {hasSmsEnabled && (!preferences.smsPhone || preferences.smsPhone.length < 10) && (
+          <p className="text-xs text-destructive mt-2">Please enter a valid phone number to receive SMS notifications.</p>
+        )}
       </section>
 
       {/* Reset */}

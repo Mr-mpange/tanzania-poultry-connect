@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { sendBrowserNotification } from "@/lib/browserNotifications";
+import { sendSmsNotification } from "@/lib/smsNotifications";
 import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
 
 export interface AppNotification {
@@ -37,6 +38,8 @@ export function useNotifications() {
   useEffect(() => {
     if (!user || !role) return;
 
+    const phone = preferences.smsPhone;
+
     const channel = supabase
       .channel("notifications-bell")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (payload) => {
@@ -44,6 +47,7 @@ export function useNotifications() {
         if (role === "farmer" && order.farmer_id === user.id) {
           if (preferences.inApp.newOrders) addNotification(`New order #${order.order_number}`, `TZS ${order.total_amount?.toLocaleString() || 0}`);
           if (preferences.browser.newOrders) sendBrowserNotification(order.order_number, "confirmed");
+          if (preferences.sms.newOrders && phone) sendSmsNotification(phone, `New order #${order.order_number}! TZS ${order.total_amount?.toLocaleString() || 0}`);
         } else if (role === "admin") {
           if (preferences.inApp.newOrders) addNotification(`New order #${order.order_number}`, `TZS ${order.total_amount?.toLocaleString() || 0}`);
         } else if (role === "distributor") {
@@ -57,6 +61,7 @@ export function useNotifications() {
           if (role === "buyer" && order.buyer_id === user.id) {
             if (preferences.inApp.orderUpdates) addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
             if (preferences.browser.orderUpdates) sendBrowserNotification(order.order_number, order.status);
+            if (preferences.sms.orderUpdates && phone) sendSmsNotification(phone, `Order #${order.order_number} status: ${order.status.replace("_", " ")}`);
           } else if (role === "farmer" && order.farmer_id === user.id) {
             if (preferences.inApp.orderUpdates) addNotification(`Order #${order.order_number} → ${order.status.replace("_", " ")}`);
           }
@@ -68,6 +73,7 @@ export function useNotifications() {
           const { data: inv } = await supabase.from("inventory").select("product_name, farmer_id").eq("id", review.inventory_id).maybeSingle();
           if (inv && inv.farmer_id === user.id) {
             if (preferences.inApp.reviews) addNotification(`New ${review.rating}★ review on "${inv.product_name}"`, review.comment || undefined);
+            if (preferences.sms.reviews && phone) sendSmsNotification(phone, `New ${review.rating}★ review on "${inv.product_name}"`);
           }
         }
       })
