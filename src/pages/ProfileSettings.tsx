@@ -2,10 +2,12 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Camera, Loader2, Save, User } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Save, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function ProfileSettings() {
   const { user, profile, role } = useAuth();
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [phone, setPhone] = useState(profile?.phone || "");
   const [location, setLocation] = useState(profile?.location || "");
