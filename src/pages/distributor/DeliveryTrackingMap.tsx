@@ -186,14 +186,14 @@ export default function DeliveryTrackingMap() {
 
               {myPosition && (
                 <AnyMarker position={myPosition} icon={deliveryIcon}>
-                  <Popup>
+                  <AnyPopup>
                     <div className="text-sm">
                       <p className="font-semibold">📍 Your Location</p>
                       <p className="text-xs text-muted-foreground">
                         {myPosition[0].toFixed(5)}, {myPosition[1].toFixed(5)}
                       </p>
                     </div>
-                  </Popup>
+                  </AnyPopup>
                 </AnyMarker>
               )}
 
