@@ -199,7 +199,7 @@ export default function DeliveryTrackingMap() {
 
               {deliveries.filter(d => d.current_lat && d.current_lng).map(d => (
                 <AnyMarker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
-                  <Popup>
+                  <AnyPopup>
                     <div className="text-sm space-y-1">
                       <p className="font-semibold">🚚 {d.orders?.order_number || "Delivery"}</p>
                       <p className="text-xs">Status: <span className="capitalize">{d.status.replace("_", " ")}</span></p>
@@ -215,7 +215,7 @@ export default function DeliveryTrackingMap() {
                         </p>
                       )}
                     </div>
-                  </Popup>
+                  </AnyPopup>
                 </AnyMarker>
               ))}
             </AnyMapContainer>
