@@ -11,11 +11,19 @@ export interface NotificationPreferences {
     newOrders: boolean;
     reviews: boolean;
   };
+  sms: {
+    orderUpdates: boolean;
+    newOrders: boolean;
+    reviews: boolean;
+  };
+  smsPhone: string;
 }
 
 const DEFAULT_PREFS: NotificationPreferences = {
   browser: { orderUpdates: true, newOrders: true, reviews: true },
   inApp: { orderUpdates: true, newOrders: true, reviews: true },
+  sms: { orderUpdates: false, newOrders: false, reviews: false },
+  smsPhone: "",
 };
 
 const STORAGE_KEY = "notification_preferences";
@@ -35,7 +43,7 @@ export function useNotificationPreferences() {
   }, [preferences]);
 
   const updatePreference = useCallback(
-    (channel: "browser" | "inApp", key: keyof NotificationPreferences["browser"], value: boolean) => {
+    (channel: "browser" | "inApp" | "sms", key: keyof NotificationPreferences["browser"], value: boolean) => {
       setPreferences((prev) => ({
         ...prev,
         [channel]: { ...prev[channel], [key]: value },
@@ -44,9 +52,13 @@ export function useNotificationPreferences() {
     []
   );
 
+  const updatePhone = useCallback((phone: string) => {
+    setPreferences((prev) => ({ ...prev, smsPhone: phone }));
+  }, []);
+
   const resetToDefaults = useCallback(() => {
     setPreferences(DEFAULT_PREFS);
   }, []);
 
-  return { preferences, updatePreference, resetToDefaults };
+  return { preferences, updatePreference, updatePhone, resetToDefaults };
 }
