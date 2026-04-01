@@ -8,6 +8,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 const AnyMapContainer = MapContainer as any;
 const AnyTileLayer = TileLayer as any;
 const AnyMarker = Marker as any;
+const AnyPopup = Popup as any;
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
@@ -185,20 +186,20 @@ export default function DeliveryTrackingMap() {
 
               {myPosition && (
                 <AnyMarker position={myPosition} icon={deliveryIcon}>
-                  <Popup>
+                  <AnyPopup>
                     <div className="text-sm">
                       <p className="font-semibold">📍 Your Location</p>
                       <p className="text-xs text-muted-foreground">
                         {myPosition[0].toFixed(5)}, {myPosition[1].toFixed(5)}
                       </p>
                     </div>
-                  </Popup>
+                  </AnyPopup>
                 </AnyMarker>
               )}
 
               {deliveries.filter(d => d.current_lat && d.current_lng).map(d => (
                 <AnyMarker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
-                  <Popup>
+                  <AnyPopup>
                     <div className="text-sm space-y-1">
                       <p className="font-semibold">🚚 {d.orders?.order_number || "Delivery"}</p>
                       <p className="text-xs">Status: <span className="capitalize">{d.status.replace("_", " ")}</span></p>
@@ -214,7 +215,7 @@ export default function DeliveryTrackingMap() {
                         </p>
                       )}
                     </div>
-                  </Popup>
+                  </AnyPopup>
                 </AnyMarker>
               ))}
             </AnyMapContainer>
