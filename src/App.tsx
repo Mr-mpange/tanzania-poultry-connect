@@ -49,7 +49,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename="/tanzania-poultry-connect">
         <AuthProvider>
           <NotificationProvider>
             <Routes>
