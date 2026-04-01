@@ -3,9 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { sendBrowserNotification, requestNotificationPermission } from "@/lib/browserNotifications";
+import { sendSmsNotification } from "@/lib/smsNotifications";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
 
 export function useOrderNotifications() {
   const { user, role } = useAuth();
+  const { preferences } = useNotificationPreferences();
 
   // Request browser notification permission for buyers on mount
   useEffect(() => {
@@ -16,6 +19,8 @@ export function useOrderNotifications() {
 
   useEffect(() => {
     if (!user || !role) return;
+
+    const phone = preferences.smsPhone;
 
     const channel = supabase
       .channel("order-notifications")
@@ -29,6 +34,9 @@ export function useOrderNotifications() {
               description: `TZS ${order.total_amount?.toLocaleString() || 0}`,
               duration: 6000,
             });
+            if (preferences.sms.newOrders && phone) {
+              sendSmsNotification(phone, `New order #${order.order_number} received! Amount: TZS ${order.total_amount?.toLocaleString() || 0}`);
+            }
           } else if (role === "admin") {
             toast.info(`📦 New order placed: #${order.order_number}`, {
               description: `TZS ${order.total_amount?.toLocaleString() || 0}`,
@@ -52,12 +60,17 @@ export function useOrderNotifications() {
               toast.info(`📋 Order #${order.order_number} → ${order.status.replace("_", " ")}`, {
                 duration: 5000,
               });
-              // Also send browser push notification
               sendBrowserNotification(order.order_number, order.status);
+              if (preferences.sms.orderUpdates && phone) {
+                sendSmsNotification(phone, `Order #${order.order_number} status updated: ${order.status.replace("_", " ")}`);
+              }
             } else if (role === "farmer" && order.farmer_id === user.id) {
               toast.info(`📋 Order #${order.order_number} status: ${order.status.replace("_", " ")}`, {
                 duration: 5000,
               });
+              if (preferences.sms.orderUpdates && phone) {
+                sendSmsNotification(phone, `Order #${order.order_number} status: ${order.status.replace("_", " ")}`);
+              }
             }
           }
         }
@@ -67,5 +80,5 @@ export function useOrderNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, role]);
+  }, [user, role, preferences]);
 }
