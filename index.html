@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- TODO: Set the document title to the name of your application -->
+    <title>Tanzania Poultry Connect</title>
+    <meta name="description" content="Tanzania Poultry Connect Platform" />
+    <script>
+      // Handle SPA redirect from 404.html
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        var p = new URLSearchParams(location.search).get('p');
+        if (p) {
+          history.replaceState(null, null, p || '/');
+        }
+      })();
+    </script>
+    <meta name="author" content="Lovable" />
+
+    <!-- TODO: Update og:title to match your application name -->
+    <meta property="og:title" content="Lovable App" />
+    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <script type="module" crossorigin src="/tanzania-poultry-connect/assets/index-B5OJWvtZ.js"></script>
+    <link rel="stylesheet" crossorigin href="/tanzania-poultry-connect/assets/index-pzhp2Z2I.css">
+  </head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

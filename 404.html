@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Tanzania Poultry Connect</title>
+    <script>
+      // Redirect to index with the path encoded as a query param
+      var path = window.location.pathname.replace('/tanzania-poultry-connect', '');
+      var search = window.location.search;
+      var hash = window.location.hash;
+      var redirect = '/tanzania-poultry-connect/?p=' + encodeURIComponent(path + search) + hash;
+      window.location.replace(redirect);
+    </script>
+  </head>
+  <body></body>
+</html>
