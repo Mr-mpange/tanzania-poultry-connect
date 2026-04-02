@@ -67,29 +67,102 @@ export default function BuyerMarketplace() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [{ data: inv }, { data: ord }, { data: revData }] = await Promise.all([
-      supabase.from("inventory").select("*, profiles!inventory_farmer_id_fkey(full_name, location)").eq("is_available", true).gt("quantity", 0),
+    setLoading(true);
+
+    const [{ data: inv, error: inventoryError }, { data: ord, error: ordersError }, { data: revData, error: reviewsError }] = await Promise.all([
+      supabase.from("inventory").select("*").eq("is_available", true).gt("quantity", 0),
       supabase.from("orders").select("*, order_items(*)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
       supabase.from("reviews" as any).select("inventory_id, rating"),
     ]);
-    setInventory(inv || []);
+
+    if (inventoryError || ordersError || reviewsError) {
+      toast.error(inventoryError?.message || ordersError?.message || reviewsError?.message || "Failed to load marketplace");
+      setInventory([]);
+      setOrders([]);
+      setReviews({});
+      setLoading(false);
+      return;
+    }
+
+    const farmerIds = Array.from(new Set((inv || []).map((item) => item.farmer_id).filter(Boolean)));
+    let profileMap: Record<string, { full_name: string; location: string | null }> = {};
+
+    if (farmerIds.length > 0) {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, location")
+        .in("user_id", farmerIds);
+
+      if (profileError) {
+        toast.error(profileError.message);
+      } else {
+        profileMap = (profileData || []).reduce((acc, profile) => {
+          acc[profile.user_id] = { full_name: profile.full_name, location: profile.location };
+          return acc;
+        }, {} as Record<string, { full_name: string; location: string | null }>);
+      }
+    }
+
+    setInventory((inv || []).map((item) => ({
+      ...item,
+      profiles: profileMap[item.farmer_id] ?? null,
+    })));
     setOrders(ord || []);
-    // Aggregate reviews
+
     const reviewMap: Record<string, { total: number; count: number }> = {};
     (revData || []).forEach((r: any) => {
       if (!reviewMap[r.inventory_id]) reviewMap[r.inventory_id] = { total: 0, count: 0 };
       reviewMap[r.inventory_id].total += r.rating;
       reviewMap[r.inventory_id].count += 1;
     });
+
     const avgMap: Record<string, { avg: number; count: number }> = {};
-    Object.entries(reviewMap).forEach(([id, v]) => { avgMap[id] = { avg: v.total / v.count, count: v.count }; });
+    Object.entries(reviewMap).forEach(([id, v]) => {
+      avgMap[id] = { avg: v.total / v.count, count: v.count };
+    });
     setReviews(avgMap);
     setLoading(false);
   };
 
   const fetchProductReviews = async (inventoryId: string) => {
-    const { data } = await supabase.from("reviews" as any).select("*, profiles:buyer_id(full_name)").eq("inventory_id", inventoryId).order("created_at", { ascending: false });
-    setProductReviews(data || []);
+    const { data, error } = await supabase
+      .from("reviews" as any)
+      .select("*")
+      .eq("inventory_id", inventoryId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error(error.message);
+      setProductReviews([]);
+      return;
+    }
+
+    const buyerIds = Array.from(new Set((data || []).map((review: any) => review.buyer_id).filter(Boolean)));
+    if (buyerIds.length === 0) {
+      setProductReviews(data || []);
+      return;
+    }
+
+    const { data: buyerProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", buyerIds);
+
+    if (profileError) {
+      toast.error(profileError.message);
+      setProductReviews(data || []);
+      return;
+    }
+
+    const buyerProfileMap = (buyerProfiles || []).reduce((acc, profile) => {
+      acc[profile.user_id] = profile;
+      return acc;
+    }, {} as Record<string, { user_id: string; full_name: string }>);
+
+    setProductReviews((data || []).map((review: any) => ({
+      ...review,
+      profiles: buyerProfileMap[review.buyer_id] ?? null,
+    })));
   };
 
   const submitReview = async (inventoryId: string) => {
