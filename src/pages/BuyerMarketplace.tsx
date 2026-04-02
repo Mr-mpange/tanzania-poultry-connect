@@ -470,7 +470,7 @@ export default function BuyerMarketplace() {
               )}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-2xl font-display font-bold text-emerald">TZS {selectedProduct.price_per_unit.toLocaleString()}</p>
+                  <p className="text-2xl font-display font-bold text-emerald">TZS {selectedProduct.price_per_unit.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/{selectedProduct.unit}</span></p>
                   <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{selectedProduct.category}</span>
                 </div>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
