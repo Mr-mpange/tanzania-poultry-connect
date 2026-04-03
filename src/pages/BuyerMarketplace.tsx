@@ -279,6 +279,7 @@ export default function BuyerMarketplace() {
 
       toast.success("Order placed successfully!");
       setCart({});
+      setDeliveryAddress("");
       fetchData();
     } catch (err: any) {
       toast.error(err.message || "Failed to place order");
