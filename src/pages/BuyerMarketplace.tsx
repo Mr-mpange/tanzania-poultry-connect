@@ -374,11 +374,16 @@ export default function BuyerMarketplace() {
           {Object.keys(cart).length > 0 && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-emerald/10 border border-emerald/30 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-              <div>
+              <div className="flex-1">
                 <p className="font-display font-semibold text-foreground">Cart: {cartItems.length} items</p>
-                <p className="text-sm text-muted-foreground">Total: TZS {cartTotal.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mb-2">Total: TZS {cartTotal.toLocaleString()}</p>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Enter delivery address..."
+                    className="w-full bg-card border border-border rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 self-end">
                 <button onClick={() => setCart({})} className="bg-muted text-foreground px-4 py-2 rounded-lg text-sm font-medium">Clear</button>
                 <button onClick={placeOrder} className="bg-emerald text-accent-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-light transition-colors flex items-center gap-2">
                   <Check className="w-4 h-4" /> Place Order
