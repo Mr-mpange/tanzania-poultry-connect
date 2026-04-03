@@ -53,6 +53,7 @@ export default function BuyerMarketplace() {
   const [locationFilter, setLocationFilter] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "price_low" | "price_high" | "rating">("newest");
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [reviews, setReviews] = useState<Record<string, { avg: number; count: number }>>({});
   const [productReviews, setProductReviews] = useState<any[]>([]);
