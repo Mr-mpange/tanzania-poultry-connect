@@ -402,8 +402,8 @@ export default function BuyerMarketplace() {
                 onClick={() => { setSelectedProduct(item); fetchProductReviews(item.id); }}>
                 {/* Product Image */}
                 {item.image_url ? (
-                  <div className="w-full h-40 bg-muted">
-                    <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
+                  <div className="w-full h-44 bg-muted overflow-hidden">
+                    <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover object-center" />
                   </div>
                 ) : (
                   <div className="w-full h-40 bg-muted flex items-center justify-center">
