@@ -248,6 +248,11 @@ export default function BuyerMarketplace() {
       byFarmer[item.farmer_id].push(item);
     });
 
+    if (!deliveryAddress.trim()) {
+      toast.error("Please enter a delivery address");
+      return;
+    }
+
     try {
       for (const [farmerId, items] of Object.entries(byFarmer)) {
         const total = items.reduce((s, i: any) => s + i.price_per_unit * i.orderQty, 0);
@@ -256,6 +261,7 @@ export default function BuyerMarketplace() {
           farmer_id: farmerId,
           total_amount: total,
           status: "pending",
+          delivery_address: deliveryAddress.trim(),
         } as any).select().single();
         
         if (error) throw error;
