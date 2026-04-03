@@ -58,7 +58,7 @@ export default function DistributorDashboard() {
     if (!user) return;
     const [{ data: dels }, { data: orders }] = await Promise.all([
       supabase.from("deliveries").select("*").eq("distributor_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("orders").select("*").is("distributor_id", null).in("status", ["confirmed", "processing"]).order("created_at", { ascending: false }),
+      supabase.from("orders").select("*").is("distributor_id", null).in("status", ["confirmed", "processing", "picked_up"]).order("created_at", { ascending: false }),
     ]);
     setDeliveries(dels || []);
     setAvailableOrders(orders || []);
