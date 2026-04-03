@@ -192,21 +192,24 @@ export default function DistributorDashboard() {
             <div className="space-y-3">
               <h2 className="font-display font-semibold text-lg text-foreground">Available Orders</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {availableOrders.map((order) => (
-                  <div key={order.id} className="bg-card border border-border rounded-xl p-4 shadow-card">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-medium text-foreground text-sm">{order.order_number}</p>
-                        <p className="text-xs text-muted-foreground">{order.delivery_address || "No address"}</p>
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">TZS {order.total_amount.toLocaleString()}</p>
-                    </div>
-                    <button onClick={() => claimOrder(order)}
-                      className="w-full mt-2 bg-emerald text-accent-foreground py-2 rounded-lg text-xs font-medium hover:bg-emerald-light transition-colors">
-                      Claim Delivery
-                    </button>
-                  </div>
-                ))}
+                 {availableOrders.map((order) => (
+                   <div key={order.id} className="bg-card border border-border rounded-xl p-4 shadow-card">
+                     <div className="flex justify-between items-start mb-2">
+                       <div>
+                         <p className="font-medium text-foreground text-sm">{order.order_number}</p>
+                         <p className="text-xs text-muted-foreground">{order.delivery_address || "No address"}</p>
+                         <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block ${
+                           order.status === "picked_up" ? "bg-emerald/10 text-emerald" : "bg-amber-100 text-amber-700"
+                         }`}>{order.status === "picked_up" ? "Ready for Pickup" : order.status.replace("_", " ")}</span>
+                       </div>
+                       <p className="text-sm font-semibold text-foreground">TZS {order.total_amount.toLocaleString()}</p>
+                     </div>
+                     <button onClick={() => claimOrder(order)}
+                       className="w-full mt-2 bg-emerald text-accent-foreground py-2 rounded-lg text-xs font-medium hover:bg-emerald-light transition-colors">
+                       Claim Delivery
+                     </button>
+                   </div>
+                 ))}
               </div>
             </div>
           )}
