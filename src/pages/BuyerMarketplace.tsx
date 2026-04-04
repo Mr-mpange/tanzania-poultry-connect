@@ -356,6 +356,9 @@ export default function BuyerMarketplace() {
       setPaymentStatus("sent");
     }
   };
+
+  return (
+    <>
     <DashboardLayout navItems={navItems} title={isOrdersPage ? "My Orders" : "Marketplace"}>
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
