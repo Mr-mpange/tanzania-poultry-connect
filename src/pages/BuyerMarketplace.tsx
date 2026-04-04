@@ -59,6 +59,11 @@ export default function BuyerMarketplace() {
   const [productReviews, setProductReviews] = useState<any[]>([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
+  const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; orderId: string; amount: number; orderNumber: string } | null>(null);
+  const [paymentPhone, setPaymentPhone] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "sent" | "checking">("idle");
+  const [paymentRef, setPaymentRef] = useState("");
 
   const isOrdersPage = window.location.pathname.includes("/orders");
 
