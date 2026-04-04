@@ -259,6 +259,7 @@ export default function BuyerMarketplace() {
     }
 
     try {
+      const createdOrders: { id: string; total: number; orderNumber: string }[] = [];
       for (const [farmerId, items] of Object.entries(byFarmer)) {
         const total = items.reduce((s, i: any) => s + i.price_per_unit * i.orderQty, 0);
         const { data: order, error } = await supabase.from("orders").insert({
@@ -280,18 +281,81 @@ export default function BuyerMarketplace() {
         }));
 
         await supabase.from("order_items").insert(orderItems as any);
+        createdOrders.push({ id: order.id, total, orderNumber: order.order_number });
       }
 
-      toast.success("Order placed successfully!");
+      toast.success("Order placed! Proceed to payment.");
       setCart({});
       setDeliveryAddress("");
       fetchData();
+
+      // Open payment dialog for the first order (or largest)
+      if (createdOrders.length > 0) {
+        const mainOrder = createdOrders[0];
+        const totalAmount = createdOrders.reduce((s, o) => s + o.total, 0);
+        setPaymentDialog({ open: true, orderId: mainOrder.id, amount: totalAmount, orderNumber: mainOrder.orderNumber });
+        setPaymentPhone("");
+        setPaymentStatus("idle");
+        setPaymentRef("");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to place order");
     }
   };
 
-  return (
+  const initiatePayment = async () => {
+    if (!paymentDialog || !paymentPhone.trim()) {
+      toast.error("Please enter your mobile money phone number");
+      return;
+    }
+    setPaymentLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("process-payment", {
+        body: {
+          action: "create_payment",
+          order_id: paymentDialog.orderId,
+          phone_number: paymentPhone.trim(),
+          amount: paymentDialog.amount,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      toast.success(data.message || "Check your phone for the payment prompt!");
+      setPaymentRef(data.reference || "");
+      setPaymentStatus("sent");
+    } catch (err: any) {
+      toast.error(err.message || "Payment failed");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!paymentRef) return;
+    setPaymentStatus("checking");
+    try {
+      const { data, error } = await supabase.functions.invoke("process-payment", {
+        body: { action: "check_status", reference: paymentRef },
+      });
+      if (error) throw error;
+      const status = data?.data?.status;
+      if (status === "completed" || status === "success") {
+        toast.success("Payment confirmed!");
+        setPaymentDialog(null);
+        fetchData();
+      } else if (status === "failed" || status === "expired") {
+        toast.error("Payment " + status);
+        setPaymentStatus("idle");
+      } else {
+        toast.info("Payment still processing. Please wait...");
+        setPaymentStatus("sent");
+      }
+    } catch (err: any) {
+      toast.error("Could not check status");
+      setPaymentStatus("sent");
+    }
+  };
     <DashboardLayout navItems={navItems} title={isOrdersPage ? "My Orders" : "Marketplace"}>
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
