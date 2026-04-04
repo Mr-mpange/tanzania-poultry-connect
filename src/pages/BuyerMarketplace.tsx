@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus, X, Star, ArrowUpDown } from "lucide-react";
+import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus, X, Star, ArrowUpDown, Phone, CreditCard, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -59,6 +59,11 @@ export default function BuyerMarketplace() {
   const [productReviews, setProductReviews] = useState<any[]>([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
+  const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; orderId: string; amount: number; orderNumber: string } | null>(null);
+  const [paymentPhone, setPaymentPhone] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "sent" | "checking">("idle");
+  const [paymentRef, setPaymentRef] = useState("");
 
   const isOrdersPage = window.location.pathname.includes("/orders");
 
@@ -254,6 +259,7 @@ export default function BuyerMarketplace() {
     }
 
     try {
+      const createdOrders: { id: string; total: number; orderNumber: string }[] = [];
       for (const [farmerId, items] of Object.entries(byFarmer)) {
         const total = items.reduce((s, i: any) => s + i.price_per_unit * i.orderQty, 0);
         const { data: order, error } = await supabase.from("orders").insert({
@@ -275,18 +281,84 @@ export default function BuyerMarketplace() {
         }));
 
         await supabase.from("order_items").insert(orderItems as any);
+        createdOrders.push({ id: order.id, total, orderNumber: order.order_number });
       }
 
-      toast.success("Order placed successfully!");
+      toast.success("Order placed! Proceed to payment.");
       setCart({});
       setDeliveryAddress("");
       fetchData();
+
+      // Open payment dialog for the first order (or largest)
+      if (createdOrders.length > 0) {
+        const mainOrder = createdOrders[0];
+        const totalAmount = createdOrders.reduce((s, o) => s + o.total, 0);
+        setPaymentDialog({ open: true, orderId: mainOrder.id, amount: totalAmount, orderNumber: mainOrder.orderNumber });
+        setPaymentPhone("");
+        setPaymentStatus("idle");
+        setPaymentRef("");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to place order");
     }
   };
 
+  const initiatePayment = async () => {
+    if (!paymentDialog || !paymentPhone.trim()) {
+      toast.error("Please enter your mobile money phone number");
+      return;
+    }
+    setPaymentLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("process-payment", {
+        body: {
+          action: "create_payment",
+          order_id: paymentDialog.orderId,
+          phone_number: paymentPhone.trim(),
+          amount: paymentDialog.amount,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      toast.success(data.message || "Check your phone for the payment prompt!");
+      setPaymentRef(data.reference || "");
+      setPaymentStatus("sent");
+    } catch (err: any) {
+      toast.error(err.message || "Payment failed");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!paymentRef) return;
+    setPaymentStatus("checking");
+    try {
+      const { data, error } = await supabase.functions.invoke("process-payment", {
+        body: { action: "check_status", reference: paymentRef },
+      });
+      if (error) throw error;
+      const status = data?.data?.status;
+      if (status === "completed" || status === "success") {
+        toast.success("Payment confirmed!");
+        setPaymentDialog(null);
+        fetchData();
+      } else if (status === "failed" || status === "expired") {
+        toast.error("Payment " + status);
+        setPaymentStatus("idle");
+      } else {
+        toast.info("Payment still processing. Please wait...");
+        setPaymentStatus("sent");
+      }
+    } catch (err: any) {
+      toast.error("Could not check status");
+      setPaymentStatus("sent");
+    }
+  };
+
   return (
+    <>
     <DashboardLayout navItems={navItems} title={isOrdersPage ? "My Orders" : "Marketplace"}>
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
@@ -573,5 +645,85 @@ export default function BuyerMarketplace() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+
+    {/* Payment Dialog */}
+    <Dialog open={!!paymentDialog?.open} onOpenChange={() => setPaymentDialog(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-emerald" /> Pay for Order
+          </DialogTitle>
+        </DialogHeader>
+        {paymentDialog && (
+          <div className="space-y-4">
+            <div className="bg-muted/50 rounded-xl p-4 space-y-1">
+              <p className="text-sm text-muted-foreground">Order: <span className="font-medium text-foreground">{paymentDialog.orderNumber}</span></p>
+              <p className="text-2xl font-display font-bold text-emerald">TZS {paymentDialog.amount.toLocaleString()}</p>
+            </div>
+
+            {paymentStatus === "idle" && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Enter your mobile money number to receive a USSD payment prompt:</p>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    value={paymentPhone}
+                    onChange={e => setPaymentPhone(e.target.value)}
+                    placeholder="e.g. 0712345678"
+                    className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none"
+                  />
+                </div>
+                <div className="flex gap-2 text-xs text-muted-foreground">
+                  <span className="bg-muted px-2 py-1 rounded">M-Pesa</span>
+                  <span className="bg-muted px-2 py-1 rounded">Airtel Money</span>
+                  <span className="bg-muted px-2 py-1 rounded">Tigo Pesa</span>
+                  <span className="bg-muted px-2 py-1 rounded">HaloPesa</span>
+                </div>
+                <button
+                  onClick={initiatePayment}
+                  disabled={paymentLoading}
+                  className="w-full bg-emerald text-accent-foreground py-3 rounded-xl font-semibold hover:bg-emerald-light transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  {paymentLoading ? "Sending..." : "Pay Now"}
+                </button>
+              </div>
+            )}
+
+            {(paymentStatus === "sent" || paymentStatus === "checking") && (
+              <div className="space-y-3 text-center">
+                <div className="w-16 h-16 bg-emerald/10 rounded-full flex items-center justify-center mx-auto">
+                  <Phone className="w-8 h-8 text-emerald" />
+                </div>
+                <p className="text-sm font-medium text-foreground">USSD prompt sent to your phone!</p>
+                <p className="text-xs text-muted-foreground">Enter your PIN on your phone to confirm the payment.</p>
+                <button
+                  onClick={checkPaymentStatus}
+                  disabled={paymentStatus === "checking"}
+                  className="w-full bg-card border border-border py-3 rounded-xl font-medium text-sm hover:bg-muted transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {paymentStatus === "checking" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {paymentStatus === "checking" ? "Checking..." : "I've Paid - Check Status"}
+                </button>
+                <button
+                  onClick={() => setPaymentStatus("idle")}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Try different number
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={() => setPaymentDialog(null)}
+              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+            >
+              Pay Later
+            </button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
