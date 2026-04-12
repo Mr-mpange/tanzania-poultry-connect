@@ -9,6 +9,7 @@ import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
 import DeliveryCard from "@/components/distributor/DeliveryCard";
 import DriverMarker from "@/components/distributor/DriverMarker";
+import RouteLines from "@/components/distributor/RouteLines";
 
 const AnyMapContainer = MapContainer as any;
 const AnyTileLayer = TileLayer as any;
@@ -192,6 +193,7 @@ export default function DeliveryTrackingMap() {
               />
 
               {myPosition && <DriverMarker position={myPosition} followDriver={!selectedId} />}
+              {myPosition && <RouteLines driverPosition={myPosition} deliveries={deliveries} />}
 
               {deliveries.filter(d => d.current_lat && d.current_lng).map(d => (
                 <AnyMarker key={d.id} position={[d.current_lat, d.current_lng]} icon={dropoffIcon}>
@@ -234,6 +236,7 @@ export default function DeliveryTrackingMap() {
                   isActive={selectedId === d.id}
                   onSelect={() => setSelectedId(selectedId === d.id ? null : d.id)}
                   onStatusUpdate={(newStatus) => updateDeliveryStatus(d, newStatus)}
+                  driverPosition={myPosition}
                 />
               ))}
             </div>

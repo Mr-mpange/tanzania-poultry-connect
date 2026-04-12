@@ -1,5 +1,6 @@
-import { MapPin, Phone, Package, ChevronRight, CheckCircle2, Truck, Clock } from "lucide-react";
+import { Package, CheckCircle2, Truck, Clock, Timer } from "lucide-react";
 import { motion } from "framer-motion";
+import { estimateEtaMinutes, haversineKm } from "@/lib/routeOptimizer";
 
 const STATUS_FLOW = ["pending", "picked_up", "in_transit", "delivered"] as const;
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
@@ -14,14 +15,21 @@ interface DeliveryCardProps {
   isActive: boolean;
   onSelect: () => void;
   onStatusUpdate: (newStatus: string) => void;
+  driverPosition?: [number, number] | null;
 }
 
-export default function DeliveryCard({ delivery, isActive, onSelect, onStatusUpdate }: DeliveryCardProps) {
+export default function DeliveryCard({ delivery, isActive, onSelect, onStatusUpdate, driverPosition }: DeliveryCardProps) {
   const d = delivery;
   const currentIdx = STATUS_FLOW.indexOf(d.status);
   const nextStatus = STATUS_FLOW[currentIdx + 1];
-  const config = STATUS_CONFIG[d.status] || STATUS_CONFIG.pending;
   const nextConfig = nextStatus ? STATUS_CONFIG[nextStatus] : null;
+
+  // Calculate distance & ETA
+  let distanceKm: number | undefined;
+  if (driverPosition && d.current_lat && d.current_lng) {
+    distanceKm = haversineKm(driverPosition, [d.current_lat, d.current_lng]);
+  }
+  const etaMinutes = estimateEtaMinutes(d.status, distanceKm);
 
   return (
     <motion.div
@@ -46,6 +54,21 @@ export default function DeliveryCard({ delivery, isActive, onSelect, onStatusUpd
             </span>
           )}
         </div>
+
+        {/* ETA Badge */}
+        {etaMinutes !== null && (
+          <div className="flex items-center gap-2 bg-secondary/10 rounded-lg px-3 py-1.5 mb-3">
+            <Timer className="w-3.5 h-3.5 text-secondary" />
+            <span className="text-xs font-semibold text-secondary">
+              ETA: {etaMinutes >= 60 ? `${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m` : `${etaMinutes} min`}
+            </span>
+            {distanceKm !== undefined && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)} km`}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Route */}
         <div className="flex items-start gap-3 mb-3">
@@ -78,7 +101,7 @@ export default function DeliveryCard({ delivery, isActive, onSelect, onStatusUpd
           ))}
         </div>
 
-        {/* Action button - Bolt style swipe-to-action */}
+        {/* Action button */}
         {nextStatus && nextConfig && (
           <button
             onClick={(e) => {
