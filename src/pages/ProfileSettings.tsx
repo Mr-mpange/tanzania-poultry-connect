@@ -1,9 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, Loader2, Save, User } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Save, User, Shield, CheckCircle, Clock, XCircle, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
+const KYC_STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  pending: { label: "Not Submitted", icon: Clock, color: "text-muted-foreground" },
+  submitted: { label: "Under Review", icon: Clock, color: "text-amber-600" },
+  verified: { label: "Verified", icon: CheckCircle, color: "text-emerald" },
+  rejected: { label: "Rejected", icon: XCircle, color: "text-destructive" },
+};
 
 export default function ProfileSettings() {
   const { user, profile, role } = useAuth();
@@ -15,6 +22,33 @@ export default function ProfileSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // KYC fields (distributor only)
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [licenseImageUrl, setLicenseImageUrl] = useState("");
+  const [kycStatus, setKycStatus] = useState("pending");
+  const [uploadingLicense, setUploadingLicense] = useState(false);
+  const licenseFileRef = useRef<HTMLInputElement>(null);
+
+  // Fetch KYC data for distributors
+  useEffect(() => {
+    if (role === "distributor" && user) {
+      supabase
+        .from("profiles")
+        .select("license_number, id_number, license_image_url, kyc_status")
+        .eq("user_id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setLicenseNumber((data as any).license_number || "");
+            setIdNumber((data as any).id_number || "");
+            setLicenseImageUrl((data as any).license_image_url || "");
+            setKycStatus((data as any).kyc_status || "pending");
+          }
+        });
+    }
+  }, [role, user]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,19 +83,65 @@ export default function ProfileSettings() {
     toast.success("Avatar uploaded");
   };
 
+  const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
+      toast.error("Please select an image or PDF file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File must be under 5MB");
+      return;
+    }
+
+    setUploadingLicense(true);
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/license.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("kyc-documents")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error("Upload failed: " + uploadError.message);
+      setUploadingLicense(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from("kyc-documents").getPublicUrl(path);
+    setLicenseImageUrl(data.publicUrl);
+    setUploadingLicense(false);
+    toast.success("License document uploaded");
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setSaving(true);
 
+    const updates: any = {
+      full_name: fullName,
+      phone,
+      location,
+      avatar_url: avatarUrl || null,
+    };
+
+    // Include KYC fields for distributors
+    if (role === "distributor") {
+      updates.license_number = licenseNumber || null;
+      updates.id_number = idNumber || null;
+      updates.license_image_url = licenseImageUrl || null;
+      // Auto-submit KYC if all fields are filled
+      if (licenseNumber && idNumber && licenseImageUrl && kycStatus === "pending") {
+        updates.kyc_status = "submitted";
+      }
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update({
-        full_name: fullName,
-        phone,
-        location,
-        avatar_url: avatarUrl || null,
-      })
+      .update(updates)
       .eq("user_id", user.id);
 
     setSaving(false);
@@ -69,8 +149,13 @@ export default function ProfileSettings() {
       toast.error(error.message);
       return;
     }
+    if (role === "distributor" && licenseNumber && idNumber && licenseImageUrl && kycStatus === "pending") {
+      setKycStatus("submitted");
+    }
     toast.success("Profile updated successfully");
   };
+
+  const kycConfig = KYC_STATUS_CONFIG[kycStatus] || KYC_STATUS_CONFIG.pending;
 
   return (
     <div className="max-w-lg mx-auto py-8 px-4">
@@ -156,6 +241,87 @@ export default function ProfileSettings() {
             className="w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </div>
+
+        {/* KYC Section - Distributor Only */}
+        {role === "distributor" && (
+          <div className="border border-border rounded-xl p-5 space-y-4 bg-card">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-secondary" />
+                <h3 className="font-display font-semibold text-foreground">KYC Verification</h3>
+              </div>
+              <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-muted ${kycConfig.color}`}>
+                <kycConfig.icon className="w-3 h-3" />
+                {kycConfig.label}
+              </span>
+            </div>
+
+            {kycStatus === "verified" ? (
+              <div className="flex items-center gap-2 text-emerald bg-emerald/10 rounded-lg p-3">
+                <CheckCircle className="w-5 h-5" />
+                <p className="text-sm font-medium">Your identity has been verified. You can accept deliveries.</p>
+              </div>
+            ) : (
+              <>
+                {kycStatus === "rejected" && (
+                  <div className="flex items-center gap-2 text-destructive bg-destructive/10 rounded-lg p-3">
+                    <XCircle className="w-5 h-5" />
+                    <p className="text-sm font-medium">Verification was rejected. Please re-submit with correct documents.</p>
+                  </div>
+                )}
+
+                {kycStatus === "submitted" && (
+                  <div className="flex items-center gap-2 text-amber-600 bg-amber-50 rounded-lg p-3">
+                    <Clock className="w-5 h-5" />
+                    <p className="text-sm font-medium">Your documents are under review. This usually takes 1-2 business days.</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">National ID Number</label>
+                  <input
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value)}
+                    placeholder="e.g. 19901234-12345-00001-23"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Driving License Number</label>
+                  <input
+                    value={licenseNumber}
+                    onChange={(e) => setLicenseNumber(e.target.value)}
+                    placeholder="e.g. DL-123456789"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">License Document</label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => licenseFileRef.current?.click()}
+                      disabled={uploadingLicense}
+                      className="flex items-center gap-2 bg-muted border border-border rounded-lg px-4 py-2.5 text-sm text-foreground hover:bg-muted/80 transition-colors"
+                    >
+                      {uploadingLicense ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      {licenseImageUrl ? "Replace File" : "Upload License"}
+                    </button>
+                    {licenseImageUrl && (
+                      <span className="text-xs text-emerald flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Uploaded
+                      </span>
+                    )}
+                  </div>
+                  <input ref={licenseFileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleLicenseUpload} />
+                  <p className="text-[10px] text-muted-foreground mt-1">Upload a photo or scan of your driving license (max 5MB)</p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <button
           type="submit"
