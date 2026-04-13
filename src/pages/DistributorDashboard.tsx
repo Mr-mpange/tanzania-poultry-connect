@@ -104,17 +104,21 @@ export default function DistributorDashboard() {
   useEffect(() => { fetchData(); }, [user]);
 
   const claimOrder = async (order: any) => {
+    const vehicleId = selectedVehicle[order.id];
+    if (vehicles.length > 0 && !vehicleId) {
+      toast.error("Please select a vehicle first");
+      return;
+    }
     try {
-      // Assign distributor to order
       await supabase.from("orders").update({ distributor_id: user!.id, status: "processing" as const }).eq("id", order.id);
-      // Create delivery record
       await supabase.from("deliveries").insert({
         order_id: order.id,
         distributor_id: user!.id,
         pickup_location: order.delivery_address || "TBD",
         delivery_location: order.delivery_address || "TBD",
         status: "pending",
-      });
+        vehicle_id: vehicleId || null,
+      } as any);
       toast.success(`Claimed order ${order.order_number}`);
       fetchData();
     } catch (err: any) {
