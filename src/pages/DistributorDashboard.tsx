@@ -74,11 +74,11 @@ export default function DistributorDashboard() {
         .in("user_id", farmerIds);
 
       const profileMap = new Map((farmerProfiles || []).map(p => [p.user_id, p]));
-      enrichedOrders = enrichedOrders.map(o => ({
-        ...o,
-        farmer_location: profileMap.get(o.farmer_id)?.location || null,
-        farmer_name: profileMap.get(o.farmer_id)?.full_name || null,
-      }));
+        enrichedOrders = enrichedOrders.map(o => ({
+          ...o,
+          farmer_location: profileMap.get(o.farmer_id)?.location || null,
+          farmer_name: profileMap.get(o.farmer_id)?.full_name || null,
+        } as any));
 
       // Filter: only show orders where the farmer's location matches the distributor's location
       const myLocation = myProfile?.location?.toLowerCase()?.trim();
