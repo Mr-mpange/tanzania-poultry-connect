@@ -60,10 +60,11 @@ export default function DistributorDashboard() {
     if (!user) return;
 
     // Fetch distributor profile, deliveries, and available orders with farmer profiles in parallel
-    const [{ data: myProfile }, { data: dels }, { data: orders }] = await Promise.all([
+    const [{ data: myProfile }, { data: dels }, { data: orders }, { data: vehs }] = await Promise.all([
       supabase.from("profiles").select("location").eq("user_id", user.id).single(),
       supabase.from("deliveries").select("*").eq("distributor_id", user.id).order("created_at", { ascending: false }),
       supabase.from("orders").select("*").is("distributor_id", null).in("status", ["confirmed", "processing", "picked_up"]).order("created_at", { ascending: false }),
+      supabase.from("vehicles").select("*").eq("distributor_id", user.id).eq("is_active", true),
     ]);
 
     // Enrich orders with farmer location from profiles
