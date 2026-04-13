@@ -65,7 +65,7 @@ export default function DistributorDashboard() {
     ]);
 
     // Enrich orders with farmer location from profiles
-    let enrichedOrders = orders || [];
+    let enrichedOrders: any[] = orders || [];
     if (enrichedOrders.length > 0) {
       const farmerIds = [...new Set(enrichedOrders.map(o => o.farmer_id))];
       const { data: farmerProfiles } = await supabase
