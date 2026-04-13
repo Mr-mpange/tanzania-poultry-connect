@@ -230,6 +230,12 @@ export default function DistributorDashboard() {
                        <div>
                          <p className="font-medium text-foreground text-sm">{order.order_number}</p>
                          <p className="text-xs text-muted-foreground">{order.delivery_address || "No address"}</p>
+                         {order.farmer_location && (
+                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                             <MapPin className="w-3 h-3" /> {order.farmer_location}
+                             {order.farmer_name && <span>• {order.farmer_name}</span>}
+                           </p>
+                         )}
                          <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block ${
                            order.status === "picked_up" ? "bg-emerald/10 text-emerald" : "bg-amber-100 text-amber-700"
                          }`}>{order.status === "picked_up" ? "Ready for Pickup" : order.status.replace("_", " ")}</span>
