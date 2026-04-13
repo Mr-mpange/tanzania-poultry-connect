@@ -56,12 +56,44 @@ export default function DistributorDashboard() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [{ data: dels }, { data: orders }] = await Promise.all([
+
+    // Fetch distributor profile, deliveries, and available orders with farmer profiles in parallel
+    const [{ data: myProfile }, { data: dels }, { data: orders }] = await Promise.all([
+      supabase.from("profiles").select("location").eq("user_id", user.id).single(),
       supabase.from("deliveries").select("*").eq("distributor_id", user.id).order("created_at", { ascending: false }),
       supabase.from("orders").select("*").is("distributor_id", null).in("status", ["confirmed", "processing", "picked_up"]).order("created_at", { ascending: false }),
     ]);
+
+    // Enrich orders with farmer location from profiles
+    let enrichedOrders = orders || [];
+    if (enrichedOrders.length > 0) {
+      const farmerIds = [...new Set(enrichedOrders.map(o => o.farmer_id))];
+      const { data: farmerProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, location, full_name")
+        .in("user_id", farmerIds);
+
+      const profileMap = new Map((farmerProfiles || []).map(p => [p.user_id, p]));
+      enrichedOrders = enrichedOrders.map(o => ({
+        ...o,
+        farmer_location: profileMap.get(o.farmer_id)?.location || null,
+        farmer_name: profileMap.get(o.farmer_id)?.full_name || null,
+      }));
+
+      // Filter: only show orders where the farmer's location matches the distributor's location
+      const myLocation = myProfile?.location?.toLowerCase()?.trim();
+      if (myLocation) {
+        enrichedOrders = enrichedOrders.filter(o => {
+          const farmerLoc = o.farmer_location?.toLowerCase()?.trim();
+          if (!farmerLoc) return false;
+          // Match if either contains the other (e.g. "Dar es Salaam" matches "Dar es Salaam, Tanzania")
+          return farmerLoc.includes(myLocation) || myLocation.includes(farmerLoc);
+        });
+      }
+    }
+
     setDeliveries(dels || []);
-    setAvailableOrders(orders || []);
+    setAvailableOrders(enrichedOrders);
     setLoading(false);
   };
 
