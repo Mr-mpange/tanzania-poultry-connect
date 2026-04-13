@@ -97,6 +97,7 @@ export default function DistributorDashboard() {
 
     setDeliveries(dels || []);
     setAvailableOrders(enrichedOrders);
+    setVehicles(vehs || []);
     setLoading(false);
   };
 
