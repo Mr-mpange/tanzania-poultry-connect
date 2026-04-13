@@ -250,10 +250,27 @@ export default function DistributorDashboard() {
                        </div>
                        <p className="text-sm font-semibold text-foreground">TZS {order.total_amount.toLocaleString()}</p>
                      </div>
-                     <button onClick={() => claimOrder(order)}
-                       className="w-full mt-2 bg-emerald text-accent-foreground py-2 rounded-lg text-xs font-medium hover:bg-emerald-light transition-colors">
-                       Claim Delivery
-                     </button>
+                      {/* Vehicle selector */}
+                      {vehicles.length > 0 && (
+                        <div className="mt-2">
+                          <select
+                            value={selectedVehicle[order.id] || ""}
+                            onChange={(e) => setSelectedVehicle(prev => ({ ...prev, [order.id]: e.target.value }))}
+                            className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                          >
+                            <option value="">Select Vehicle</option>
+                            {vehicles.map(v => (
+                              <option key={v.id} value={v.id}>
+                                {v.vehicle_name} — {v.plate_number} ({v.vehicle_type}, {v.capacity_kg}kg)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <button onClick={() => claimOrder(order)}
+                        className="w-full mt-2 bg-emerald text-accent-foreground py-2 rounded-lg text-xs font-medium hover:bg-emerald-light transition-colors">
+                        Claim Delivery
+                      </button>
                    </div>
                  ))}
               </div>
