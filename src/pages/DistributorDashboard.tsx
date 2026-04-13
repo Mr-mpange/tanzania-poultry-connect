@@ -49,8 +49,10 @@ export default function DistributorDashboard() {
   const { user } = useAuth();
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<Record<string, string>>({});
 
   const isRoutesPage = window.location.pathname.includes("/routes");
 
