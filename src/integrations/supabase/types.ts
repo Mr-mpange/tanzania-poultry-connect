@@ -107,6 +107,7 @@ export type Database = {
           pickup_location: string | null
           status: string
           updated_at: string
+          vehicle_id: string | null
         }
         Insert: {
           created_at?: string
@@ -123,6 +124,7 @@ export type Database = {
           pickup_location?: string | null
           status?: string
           updated_at?: string
+          vehicle_id?: string | null
         }
         Update: {
           created_at?: string
@@ -139,6 +141,7 @@ export type Database = {
           pickup_location?: string | null
           status?: string
           updated_at?: string
+          vehicle_id?: string | null
         }
         Relationships: [
           {
@@ -146,6 +149,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -391,6 +401,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          id_number: string | null
           is_approved: boolean
           kyc_status: "pending" | "verified" | "rejected"
           location: string | null
@@ -403,6 +414,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          id_number?: string | null
           is_approved?: boolean
           kyc_status?: "pending" | "verified" | "rejected"
           location?: string | null
@@ -415,6 +427,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          id_number?: string | null
           is_approved?: boolean
           kyc_status?: "pending" | "verified" | "rejected"
           location?: string | null
@@ -537,8 +550,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }

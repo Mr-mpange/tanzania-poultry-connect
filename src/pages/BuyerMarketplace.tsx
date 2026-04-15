@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus, X, Star, ArrowUpDown } from "lucide-react";
+import { ShoppingCart, Search, MapPin, Filter, ShoppingBag, Package, Loader2, Check, Settings, Heart, MessageSquare, Plus, Minus, X, Star, ArrowUpDown, Phone, CreditCard, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -53,11 +53,17 @@ export default function BuyerMarketplace() {
   const [locationFilter, setLocationFilter] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "price_low" | "price_high" | "rating">("newest");
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [reviews, setReviews] = useState<Record<string, { avg: number; count: number }>>({});
   const [productReviews, setProductReviews] = useState<any[]>([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const { favoriteIds, toggle: toggleFavorite } = useFavorites(user?.id);
+  const [paymentDialog, setPaymentDialog] = useState<{ open: boolean; orderId: string; amount: number; orderNumber: string } | null>(null);
+  const [paymentPhone, setPaymentPhone] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "sent" | "checking">("idle");
+  const [paymentRef, setPaymentRef] = useState("");
 
   const isOrdersPage = window.location.pathname.includes("/orders");
 
@@ -67,29 +73,102 @@ export default function BuyerMarketplace() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [{ data: inv }, { data: ord }, { data: revData }] = await Promise.all([
-      supabase.from("inventory").select("*, profiles!inventory_farmer_id_fkey(full_name, location)").eq("is_available", true).gt("quantity", 0),
+    setLoading(true);
+
+    const [{ data: inv, error: inventoryError }, { data: ord, error: ordersError }, { data: revData, error: reviewsError }] = await Promise.all([
+      supabase.from("inventory").select("*").eq("is_available", true).gt("quantity", 0),
       supabase.from("orders").select("*, order_items(*)").eq("buyer_id", user.id).order("created_at", { ascending: false }),
       supabase.from("reviews" as any).select("inventory_id, rating"),
     ]);
-    setInventory(inv || []);
+
+    if (inventoryError || ordersError || reviewsError) {
+      toast.error(inventoryError?.message || ordersError?.message || reviewsError?.message || "Failed to load marketplace");
+      setInventory([]);
+      setOrders([]);
+      setReviews({});
+      setLoading(false);
+      return;
+    }
+
+    const farmerIds = Array.from(new Set((inv || []).map((item) => item.farmer_id).filter(Boolean)));
+    let profileMap: Record<string, { full_name: string; location: string | null }> = {};
+
+    if (farmerIds.length > 0) {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, location")
+        .in("user_id", farmerIds);
+
+      if (profileError) {
+        toast.error(profileError.message);
+      } else {
+        profileMap = (profileData || []).reduce((acc, profile) => {
+          acc[profile.user_id] = { full_name: profile.full_name, location: profile.location };
+          return acc;
+        }, {} as Record<string, { full_name: string; location: string | null }>);
+      }
+    }
+
+    setInventory((inv || []).map((item) => ({
+      ...item,
+      profiles: profileMap[item.farmer_id] ?? null,
+    })));
     setOrders(ord || []);
-    // Aggregate reviews
+
     const reviewMap: Record<string, { total: number; count: number }> = {};
     (revData || []).forEach((r: any) => {
       if (!reviewMap[r.inventory_id]) reviewMap[r.inventory_id] = { total: 0, count: 0 };
       reviewMap[r.inventory_id].total += r.rating;
       reviewMap[r.inventory_id].count += 1;
     });
+
     const avgMap: Record<string, { avg: number; count: number }> = {};
-    Object.entries(reviewMap).forEach(([id, v]) => { avgMap[id] = { avg: v.total / v.count, count: v.count }; });
+    Object.entries(reviewMap).forEach(([id, v]) => {
+      avgMap[id] = { avg: v.total / v.count, count: v.count };
+    });
     setReviews(avgMap);
     setLoading(false);
   };
 
   const fetchProductReviews = async (inventoryId: string) => {
-    const { data } = await supabase.from("reviews" as any).select("*, profiles:buyer_id(full_name)").eq("inventory_id", inventoryId).order("created_at", { ascending: false });
-    setProductReviews(data || []);
+    const { data, error } = await supabase
+      .from("reviews" as any)
+      .select("*")
+      .eq("inventory_id", inventoryId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error(error.message);
+      setProductReviews([]);
+      return;
+    }
+
+    const buyerIds = Array.from(new Set((data || []).map((review: any) => review.buyer_id).filter(Boolean)));
+    if (buyerIds.length === 0) {
+      setProductReviews(data || []);
+      return;
+    }
+
+    const { data: buyerProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", buyerIds);
+
+    if (profileError) {
+      toast.error(profileError.message);
+      setProductReviews(data || []);
+      return;
+    }
+
+    const buyerProfileMap = (buyerProfiles || []).reduce((acc, profile) => {
+      acc[profile.user_id] = profile;
+      return acc;
+    }, {} as Record<string, { user_id: string; full_name: string }>);
+
+    setProductReviews((data || []).map((review: any) => ({
+      ...review,
+      profiles: buyerProfileMap[review.buyer_id] ?? null,
+    })));
   };
 
   const submitReview = async (inventoryId: string) => {
@@ -174,7 +253,13 @@ export default function BuyerMarketplace() {
       byFarmer[item.farmer_id].push(item);
     });
 
+    if (!deliveryAddress.trim()) {
+      toast.error("Please enter a delivery address");
+      return;
+    }
+
     try {
+      const createdOrders: { id: string; total: number; orderNumber: string }[] = [];
       for (const [farmerId, items] of Object.entries(byFarmer)) {
         const total = items.reduce((s, i: any) => s + i.price_per_unit * i.orderQty, 0);
         const { data: order, error } = await supabase.from("orders").insert({
@@ -182,6 +267,7 @@ export default function BuyerMarketplace() {
           farmer_id: farmerId,
           total_amount: total,
           status: "pending",
+          delivery_address: deliveryAddress.trim(),
         } as any).select().single();
         
         if (error) throw error;
@@ -195,17 +281,84 @@ export default function BuyerMarketplace() {
         }));
 
         await supabase.from("order_items").insert(orderItems as any);
+        createdOrders.push({ id: order.id, total, orderNumber: order.order_number });
       }
 
-      toast.success("Order placed successfully!");
+      toast.success("Order placed! Proceed to payment.");
       setCart({});
+      setDeliveryAddress("");
       fetchData();
+
+      // Open payment dialog for the first order (or largest)
+      if (createdOrders.length > 0) {
+        const mainOrder = createdOrders[0];
+        const totalAmount = createdOrders.reduce((s, o) => s + o.total, 0);
+        setPaymentDialog({ open: true, orderId: mainOrder.id, amount: totalAmount, orderNumber: mainOrder.orderNumber });
+        setPaymentPhone("");
+        setPaymentStatus("idle");
+        setPaymentRef("");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to place order");
     }
   };
 
+  const initiatePayment = async () => {
+    if (!paymentDialog || !paymentPhone.trim()) {
+      toast.error("Please enter your mobile money phone number");
+      return;
+    }
+    setPaymentLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("process-payment", {
+        body: {
+          action: "create_payment",
+          order_id: paymentDialog.orderId,
+          phone_number: paymentPhone.trim(),
+          amount: paymentDialog.amount,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      toast.success(data.message || "Check your phone for the payment prompt!");
+      setPaymentRef(data.reference || "");
+      setPaymentStatus("sent");
+    } catch (err: any) {
+      toast.error(err.message || "Payment failed");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!paymentRef) return;
+    setPaymentStatus("checking");
+    try {
+      const { data, error } = await supabase.functions.invoke("process-payment", {
+        body: { action: "check_status", reference: paymentRef },
+      });
+      if (error) throw error;
+      const status = data?.data?.status;
+      if (status === "completed" || status === "success") {
+        toast.success("Payment confirmed!");
+        setPaymentDialog(null);
+        fetchData();
+      } else if (status === "failed" || status === "expired") {
+        toast.error("Payment " + status);
+        setPaymentStatus("idle");
+      } else {
+        toast.info("Payment still processing. Please wait...");
+        setPaymentStatus("sent");
+      }
+    } catch (err: any) {
+      toast.error("Could not check status");
+      setPaymentStatus("sent");
+    }
+  };
+
   return (
+    <>
     <DashboardLayout navItems={navItems} title={isOrdersPage ? "My Orders" : "Marketplace"}>
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald" /></div>
@@ -293,11 +446,16 @@ export default function BuyerMarketplace() {
           {Object.keys(cart).length > 0 && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-emerald/10 border border-emerald/30 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-              <div>
+              <div className="flex-1">
                 <p className="font-display font-semibold text-foreground">Cart: {cartItems.length} items</p>
-                <p className="text-sm text-muted-foreground">Total: TZS {cartTotal.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mb-2">Total: TZS {cartTotal.toLocaleString()}</p>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} placeholder="Enter delivery address..."
+                    className="w-full bg-card border border-border rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none" />
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 self-end">
                 <button onClick={() => setCart({})} className="bg-muted text-foreground px-4 py-2 rounded-lg text-sm font-medium">Clear</button>
                 <button onClick={placeOrder} className="bg-emerald text-accent-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-light transition-colors flex items-center gap-2">
                   <Check className="w-4 h-4" /> Place Order
@@ -316,8 +474,8 @@ export default function BuyerMarketplace() {
                 onClick={() => { setSelectedProduct(item); fetchProductReviews(item.id); }}>
                 {/* Product Image */}
                 {item.image_url ? (
-                  <div className="w-full h-40 bg-muted">
-                    <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
+                  <div className="w-full h-44 bg-muted overflow-hidden">
+                    <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover object-center" />
                   </div>
                 ) : (
                   <div className="w-full h-40 bg-muted flex items-center justify-center">
@@ -350,7 +508,7 @@ export default function BuyerMarketplace() {
                   )}
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-display font-bold text-emerald">TZS {item.price_per_unit.toLocaleString()}</p>
+                      <p className="text-lg font-display font-bold text-emerald">TZS {item.price_per_unit.toLocaleString()}<span className="text-xs font-normal text-muted-foreground">/{item.unit}</span></p>
                       <p className="text-xs text-muted-foreground">{item.quantity} {item.unit} available</p>
                     </div>
                     {cart[item.id] ? (
@@ -397,7 +555,7 @@ export default function BuyerMarketplace() {
               )}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-2xl font-display font-bold text-emerald">TZS {selectedProduct.price_per_unit.toLocaleString()}</p>
+                  <p className="text-2xl font-display font-bold text-emerald">TZS {selectedProduct.price_per_unit.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/{selectedProduct.unit}</span></p>
                   <span className="bg-emerald/10 text-emerald text-xs px-2 py-0.5 rounded-full capitalize">{selectedProduct.category}</span>
                 </div>
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -487,5 +645,85 @@ export default function BuyerMarketplace() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+
+    {/* Payment Dialog */}
+    <Dialog open={!!paymentDialog?.open} onOpenChange={() => setPaymentDialog(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-emerald" /> Pay for Order
+          </DialogTitle>
+        </DialogHeader>
+        {paymentDialog && (
+          <div className="space-y-4">
+            <div className="bg-muted/50 rounded-xl p-4 space-y-1">
+              <p className="text-sm text-muted-foreground">Order: <span className="font-medium text-foreground">{paymentDialog.orderNumber}</span></p>
+              <p className="text-2xl font-display font-bold text-emerald">TZS {paymentDialog.amount.toLocaleString()}</p>
+            </div>
+
+            {paymentStatus === "idle" && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Enter your mobile money number to receive a USSD payment prompt:</p>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    value={paymentPhone}
+                    onChange={e => setPaymentPhone(e.target.value)}
+                    placeholder="e.g. 0712345678"
+                    className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald/50 focus:outline-none"
+                  />
+                </div>
+                <div className="flex gap-2 text-xs text-muted-foreground">
+                  <span className="bg-muted px-2 py-1 rounded">M-Pesa</span>
+                  <span className="bg-muted px-2 py-1 rounded">Airtel Money</span>
+                  <span className="bg-muted px-2 py-1 rounded">Tigo Pesa</span>
+                  <span className="bg-muted px-2 py-1 rounded">HaloPesa</span>
+                </div>
+                <button
+                  onClick={initiatePayment}
+                  disabled={paymentLoading}
+                  className="w-full bg-emerald text-accent-foreground py-3 rounded-xl font-semibold hover:bg-emerald-light transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  {paymentLoading ? "Sending..." : "Pay Now"}
+                </button>
+              </div>
+            )}
+
+            {(paymentStatus === "sent" || paymentStatus === "checking") && (
+              <div className="space-y-3 text-center">
+                <div className="w-16 h-16 bg-emerald/10 rounded-full flex items-center justify-center mx-auto">
+                  <Phone className="w-8 h-8 text-emerald" />
+                </div>
+                <p className="text-sm font-medium text-foreground">USSD prompt sent to your phone!</p>
+                <p className="text-xs text-muted-foreground">Enter your PIN on your phone to confirm the payment.</p>
+                <button
+                  onClick={checkPaymentStatus}
+                  disabled={paymentStatus === "checking"}
+                  className="w-full bg-card border border-border py-3 rounded-xl font-medium text-sm hover:bg-muted transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {paymentStatus === "checking" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {paymentStatus === "checking" ? "Checking..." : "I've Paid - Check Status"}
+                </button>
+                <button
+                  onClick={() => setPaymentStatus("idle")}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Try different number
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={() => setPaymentDialog(null)}
+              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+            >
+              Pay Later
+            </button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

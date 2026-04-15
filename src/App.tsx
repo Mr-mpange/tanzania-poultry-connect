@@ -49,7 +49,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename={import.meta.env.PROD ? "/tanzania-poultry-connect" : ""}>
+      <BrowserRouter basename="/tanzania-poultry-connect">
         <AuthProvider>
           <NotificationProvider>
             <Routes>

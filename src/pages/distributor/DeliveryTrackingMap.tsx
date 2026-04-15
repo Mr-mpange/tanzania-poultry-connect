@@ -2,18 +2,19 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Truck, Navigation, DollarSign, MessageSquare, Car, Settings, Loader2, MapPin, Radio } from "lucide-react";
+import { Truck, Navigation, DollarSign, MessageSquare, Car, Settings, Loader2, Radio } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-// Cast react-leaflet components to any to avoid v5 type mismatches
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { toast } from "sonner";
+import DeliveryCard from "@/components/distributor/DeliveryCard";
+import DriverMarker from "@/components/distributor/DriverMarker";
+import RouteLines from "@/components/distributor/RouteLines";
+
 const AnyMapContainer = MapContainer as any;
 const AnyTileLayer = TileLayer as any;
 const AnyMarker = Marker as any;
 const AnyPopup = Popup as any;
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { toast } from "sonner";
-import RouteOptimizer from "@/components/distributor/RouteOptimizer";
-import type { DeliveryStop } from "@/lib/routeOptimizer";
 
 const navItems = [
   { title: "Deliveries", url: "/dashboard/distributor", icon: Truck },
@@ -32,7 +33,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const deliveryIcon = new L.Icon({
+const dropoffIcon = new L.Icon({
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
@@ -41,24 +42,14 @@ const deliveryIcon = new L.Icon({
   popupAnchor: [1, -34],
 });
 
-function FitBounds({ positions }: { positions: [number, number][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (positions.length > 0) {
-      const bounds = L.latLngBounds(positions.map(p => L.latLng(p[0], p[1])));
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
-  }, [positions, map]);
-  return null;
-}
-
 export default function DeliveryTrackingMap() {
   const { user } = useAuth();
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tracking, setTracking] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
   const [myPosition, setMyPosition] = useState<[number, number] | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"starting" | "active" | "error">("starting");
+  const watchIdRef = useRef<number | null>(null);
 
   const fetchDeliveries = useCallback(async () => {
     if (!user) return;
@@ -72,68 +63,27 @@ export default function DeliveryTrackingMap() {
     setLoading(false);
   }, [user]);
 
+  // Auto-start GPS tracking on mount
   useEffect(() => {
-    fetchDeliveries();
-
-    // Subscribe to realtime changes
-    if (!user) return;
-    const channel = supabase
-      .channel("delivery-tracking")
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "deliveries",
-        filter: `distributor_id=eq.${user.id}`,
-      }, () => fetchDeliveries())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [user, fetchDeliveries]);
-
-  const startTracking = () => {
     if (!navigator.geolocation) {
-      toast.error("Geolocation not supported by your browser");
+      setGpsStatus("error");
+      toast.error("Geolocation not supported");
       return;
     }
-    setTracking(true);
-    toast.success("Live tracking started");
 
     watchIdRef.current = navigator.geolocation.watchPosition(
-      async (pos) => {
+      (pos) => {
         const { latitude, longitude } = pos.coords;
         setMyPosition([latitude, longitude]);
-
-        // Update all active deliveries with current position
-        if (user) {
-          await supabase
-            .from("deliveries")
-            .update({
-              current_lat: latitude,
-              current_lng: longitude,
-              last_location_update: new Date().toISOString(),
-            } as any)
-            .eq("distributor_id", user.id)
-            .in("status", ["picked_up", "in_transit"]);
-        }
+        setGpsStatus("active");
       },
       (err) => {
-        toast.error(`Location error: ${err.message}`);
-        setTracking(false);
+        setGpsStatus("error");
+        console.error("GPS error:", err.message);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
     );
-  };
 
-  const stopTracking = () => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
-    setTracking(false);
-    toast.info("Tracking stopped");
-  };
-
-  useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -141,79 +91,116 @@ export default function DeliveryTrackingMap() {
     };
   }, []);
 
-  // Default center: Dar es Salaam, Tanzania
+  // Push location to DB every 10s when we have active deliveries
+  useEffect(() => {
+    if (!myPosition || !user) return;
+    const activeInTransit = deliveries.filter(d => ["picked_up", "in_transit"].includes(d.status));
+    if (activeInTransit.length === 0) return;
+
+    const interval = setInterval(async () => {
+      if (!myPosition) return;
+      await supabase
+        .from("deliveries")
+        .update({
+          current_lat: myPosition[0],
+          current_lng: myPosition[1],
+          last_location_update: new Date().toISOString(),
+        } as any)
+        .eq("distributor_id", user.id)
+        .in("status", ["picked_up", "in_transit"]);
+    }, 10000);
+
+    // Push immediately
+    supabase
+      .from("deliveries")
+      .update({
+        current_lat: myPosition[0],
+        current_lng: myPosition[1],
+        last_location_update: new Date().toISOString(),
+      } as any)
+      .eq("distributor_id", user.id)
+      .in("status", ["picked_up", "in_transit"]);
+
+    return () => clearInterval(interval);
+  }, [myPosition, user, deliveries]);
+
+  // Fetch deliveries + realtime
+  useEffect(() => {
+    fetchDeliveries();
+    if (!user) return;
+    const channel = supabase
+      .channel("delivery-tracking")
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "deliveries",
+        filter: `distributor_id=eq.${user.id}`,
+      }, () => fetchDeliveries())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchDeliveries]);
+
+  const updateDeliveryStatus = async (delivery: any, newStatus: string) => {
+    const updates: any = { status: newStatus };
+    if (newStatus === "picked_up") updates.picked_up_at = new Date().toISOString();
+    if (newStatus === "delivered") updates.delivered_at = new Date().toISOString();
+
+    await supabase.from("deliveries").update(updates).eq("id", delivery.id);
+
+    const orderStatusMap: Record<string, string> = {
+      picked_up: "picked_up",
+      in_transit: "in_transit",
+      delivered: "delivered",
+    };
+    if (orderStatusMap[newStatus]) {
+      await supabase.from("orders").update({ status: orderStatusMap[newStatus] as any }).eq("id", delivery.order_id);
+    }
+
+    const labels: Record<string, string> = {
+      picked_up: "Picked up! Start delivery when ready.",
+      in_transit: "On the way! Drive safely.",
+      delivered: "Delivered! Great job 🎉",
+    };
+    toast.success(labels[newStatus] || "Status updated");
+    fetchDeliveries();
+  };
+
   const defaultCenter: [number, number] = [-6.7924, 39.2083];
   const mapCenter = myPosition || defaultCenter;
 
-  const markerPositions: [number, number][] = [];
-  if (myPosition) markerPositions.push(myPosition);
-  deliveries.forEach(d => {
-    if (d.current_lat && d.current_lng) markerPositions.push([d.current_lat, d.current_lng]);
-  });
-
   return (
     <DashboardLayout navItems={navItems} title="Distributor Dashboard">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h2 className="font-display font-semibold text-lg text-foreground flex items-center gap-2">
-            <Navigation className="w-5 h-5 text-secondary" /> Delivery Tracking Map
-          </h2>
-          <div className="flex items-center gap-2">
-            {tracking ? (
-              <button onClick={stopTracking}
-                className="flex items-center gap-2 bg-destructive text-destructive-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
-                <Radio className="w-4 h-4 animate-pulse" /> Stop Tracking
-              </button>
-            ) : (
-              <button onClick={startTracking}
-                className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
-                <MapPin className="w-4 h-4" /> Start Live Tracking
-              </button>
-            )}
-          </div>
+      <div className="relative">
+        {/* GPS Status indicator */}
+        <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2 bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border shadow-lg">
+          <div className={`w-2 h-2 rounded-full ${
+            gpsStatus === "active" ? "bg-emerald animate-pulse" : 
+            gpsStatus === "starting" ? "bg-amber-500 animate-pulse" : "bg-destructive"
+          }`} />
+          <span className="text-xs font-medium text-foreground">
+            {gpsStatus === "active" ? "Live" : gpsStatus === "starting" ? "Connecting..." : "GPS Off"}
+          </span>
+          {gpsStatus === "active" && <Radio className="w-3 h-3 text-emerald" />}
         </div>
 
+        {/* Map */}
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-secondary" /></div>
         ) : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card" style={{ height: "500px" }}>
-            <AnyMapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-card" style={{ height: "55vh", minHeight: 400 }}>
+            <AnyMapContainer center={mapCenter} zoom={14} style={{ height: "100%", width: "100%" }} scrollWheelZoom zoomControl={false}>
               <AnyTileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              {markerPositions.length > 0 && <FitBounds positions={markerPositions} />}
 
-              {myPosition && (
-                <AnyMarker position={myPosition} icon={deliveryIcon}>
-                  <AnyPopup>
-                    <div className="text-sm">
-                      <p className="font-semibold">📍 Your Location</p>
-                      <p className="text-xs text-muted-foreground">
-                        {myPosition[0].toFixed(5)}, {myPosition[1].toFixed(5)}
-                      </p>
-                    </div>
-                  </AnyPopup>
-                </AnyMarker>
-              )}
+              {myPosition && <DriverMarker position={myPosition} followDriver={!selectedId} />}
+              {myPosition && <RouteLines driverPosition={myPosition} deliveries={deliveries} />}
 
               {deliveries.filter(d => d.current_lat && d.current_lng).map(d => (
-                <AnyMarker key={d.id} position={[d.current_lat, d.current_lng]} icon={deliveryIcon}>
+                <AnyMarker key={d.id} position={[d.current_lat, d.current_lng]} icon={dropoffIcon}>
                   <AnyPopup>
                     <div className="text-sm space-y-1">
                       <p className="font-semibold">🚚 {d.orders?.order_number || "Delivery"}</p>
-                      <p className="text-xs">Status: <span className="capitalize">{d.status.replace("_", " ")}</span></p>
-                      {d.orders?.delivery_address && (
-                        <p className="text-xs">To: {d.orders.delivery_address}</p>
-                      )}
-                      {d.orders?.total_amount && (
-                        <p className="text-xs">Amount: TZS {d.orders.total_amount.toLocaleString()}</p>
-                      )}
-                      {d.last_location_update && (
-                        <p className="text-xs text-muted-foreground">
-                          Updated: {new Date(d.last_location_update).toLocaleTimeString()}
-                        </p>
-                      )}
+                      <p className="text-xs capitalize">{d.status.replace("_", " ")}</p>
                     </div>
                   </AnyPopup>
                 </AnyMarker>
@@ -222,40 +209,35 @@ export default function DeliveryTrackingMap() {
           </div>
         )}
 
-        {/* Route Optimization */}
-        <RouteOptimizer
-          origin={myPosition}
-          deliveries={deliveries}
-          onSelectOrder={(ordered: DeliveryStop[]) => {
-            toast.success(`Route optimized: ${ordered.map((s, i) => `${i + 1}. ${s.label}`).join(" → ")}`);
-          }}
-        />
+        {/* Delivery Cards - Bolt style bottom panel */}
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-display font-bold text-foreground text-base">
+              Active Deliveries ({deliveries.length})
+            </h3>
+            {deliveries.some(d => d.status === "in_transit") && (
+              <span className="flex items-center gap-1.5 text-xs font-medium text-emerald bg-emerald/10 px-2.5 py-1 rounded-full">
+                <Radio className="w-3 h-3 animate-pulse" /> On Route
+              </span>
+            )}
+          </div>
 
-        {/* Active deliveries list */}
-        <div className="bg-card border border-border rounded-xl p-5 shadow-card">
-          <h3 className="font-display font-semibold text-foreground mb-3">Active Deliveries ({deliveries.length})</h3>
           {deliveries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No active deliveries at the moment.</p>
+            <div className="bg-card border border-border rounded-2xl p-8 text-center">
+              <Truck className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No active deliveries. Claim orders from the dashboard!</p>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {deliveries.map(d => (
-                <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{d.orders?.order_number || "Delivery"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {d.orders?.delivery_address || "No address"} · <span className="capitalize">{d.status.replace("_", " ")}</span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    {d.last_location_update ? (
-                      <p className="text-xs text-muted-foreground">
-                        Last update: {new Date(d.last_location_update).toLocaleTimeString()}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground/50">No GPS data</p>
-                    )}
-                  </div>
-                </div>
+                <DeliveryCard
+                  key={d.id}
+                  delivery={d}
+                  isActive={selectedId === d.id}
+                  onSelect={() => setSelectedId(selectedId === d.id ? null : d.id)}
+                  onStatusUpdate={(newStatus) => updateDeliveryStatus(d, newStatus)}
+                  driverPosition={myPosition}
+                />
               ))}
             </div>
           )}
