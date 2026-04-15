@@ -15,3 +15,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Clear stale localStorage keys when session is signed out (e.g. expired refresh token)
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_OUT") {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith("sb-")) localStorage.removeItem(key);
+    });
+  }
+});
