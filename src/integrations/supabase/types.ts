@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      kyc_documents: {
+        Row: {
+          id: string
+          user_id: string
+          doc_type: string
+          doc_url: string
+          status: "pending" | "verified" | "rejected"
+          admin_note: string | null
+          uploaded_at: string
+          reviewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          doc_type: string
+          doc_url: string
+          status?: "pending" | "verified" | "rejected"
+          admin_note?: string | null
+          uploaded_at?: string
+          reviewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          doc_type?: string
+          doc_url?: string
+          status?: "pending" | "verified" | "rejected"
+          admin_note?: string | null
+          uploaded_at?: string
+          reviewed_at?: string | null
+        }
+        Relationships: []
+      }
+      vehicle_kyc_documents: {
+        Row: {
+          id: string
+          vehicle_id: string
+          distributor_id: string
+          doc_type: string
+          doc_url: string
+          status: "pending" | "verified" | "rejected"
+          admin_note: string | null
+          uploaded_at: string
+          reviewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          vehicle_id: string
+          distributor_id: string
+          doc_type: string
+          doc_url: string
+          status?: "pending" | "verified" | "rejected"
+          admin_note?: string | null
+          uploaded_at?: string
+          reviewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          vehicle_id?: string
+          distributor_id?: string
+          doc_type?: string
+          doc_url?: string
+          status?: "pending" | "verified" | "rejected"
+          admin_note?: string | null
+          uploaded_at?: string
+          reviewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_kyc_documents_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deliveries: {
         Row: {
           created_at: string
@@ -315,6 +392,7 @@ export type Database = {
           full_name: string
           id: string
           is_approved: boolean
+          kyc_status: "pending" | "verified" | "rejected"
           location: string | null
           phone: string | null
           updated_at: string
@@ -326,6 +404,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_approved?: boolean
+          kyc_status?: "pending" | "verified" | "rejected"
           location?: string | null
           phone?: string | null
           updated_at?: string
@@ -337,6 +416,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_approved?: boolean
+          kyc_status?: "pending" | "verified" | "rejected"
           location?: string | null
           phone?: string | null
           updated_at?: string
@@ -414,6 +494,7 @@ export type Database = {
           distributor_id: string
           id: string
           is_active: boolean
+          kyc_status: "pending" | "verified" | "rejected"
           plate_number: string
           updated_at: string
           vehicle_name: string
@@ -425,6 +506,7 @@ export type Database = {
           distributor_id: string
           id?: string
           is_active?: boolean
+          kyc_status?: "pending" | "verified" | "rejected"
           plate_number: string
           updated_at?: string
           vehicle_name: string
@@ -436,6 +518,7 @@ export type Database = {
           distributor_id?: string
           id?: string
           is_active?: boolean
+          kyc_status?: "pending" | "verified" | "rejected"
           plate_number?: string
           updated_at?: string
           vehicle_name?: string
@@ -462,6 +545,7 @@ export type Database = {
     }
     Enums: {
       app_role: "farmer" | "buyer" | "distributor" | "admin"
+      kyc_status: "pending" | "verified" | "rejected"
       order_status:
         | "pending"
         | "confirmed"
@@ -599,6 +683,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["farmer", "buyer", "distributor", "admin"],
+      kyc_status: ["pending", "verified", "rejected"],
       order_status: [
         "pending",
         "confirmed",

@@ -49,7 +49,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename="/tanzania-poultry-connect">
+      <BrowserRouter basename={import.meta.env.PROD ? "/tanzania-poultry-connect" : ""}>
         <AuthProvider>
           <NotificationProvider>
             <Routes>
@@ -86,6 +86,7 @@ const App = () => (
               <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/admin/users" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/admin/orders" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/admin/kyc" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/dashboard/admin/reports" element={<ProtectedRoute allowedRoles={["admin"]}><AdminReports /></ProtectedRoute>} />
               <Route path="/dashboard/admin/analytics" element={<ProtectedRoute allowedRoles={["admin"]}><AdminAdvancedAnalytics /></ProtectedRoute>} />
               <Route path="/dashboard/admin/platform" element={<ProtectedRoute allowedRoles={["admin"]}><PlatformSettings /></ProtectedRoute>} />

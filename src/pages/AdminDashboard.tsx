@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings, Search, FileText, Sliders } from "lucide-react";
+import { BarChart3, Users, ShoppingCart, Truck, TrendingUp, Package, Loader2, CheckCircle, XCircle, Pencil, Trash2, ShieldCheck, ShieldX, X, Settings, Search, FileText, Sliders, ShieldAlert, ExternalLink, Car } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 
 const navItems = [
   { title: "Overview", url: "/dashboard/admin", icon: BarChart3 },
   { title: "Users", url: "/dashboard/admin/users", icon: Users },
+  { title: "KYC Review", url: "/dashboard/admin/kyc", icon: ShieldCheck },
   { title: "Orders", url: "/dashboard/admin/orders", icon: ShoppingCart },
   { title: "Reports", url: "/dashboard/admin/reports", icon: FileText },
   { title: "Analytics", url: "/dashboard/admin/analytics", icon: TrendingUp },
@@ -33,6 +34,114 @@ function StatCard({ label, value, icon: Icon, color, trend }: { label: string; v
 }
 
 const CHART_COLORS = ["hsl(160,50%,45%)", "hsl(220,60%,50%)", "hsl(40,90%,55%)", "hsl(280,60%,55%)", "hsl(0,70%,55%)"];
+
+const KYC_STATUS_STYLE: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  verified: "bg-emerald/10 text-emerald",
+  rejected: "bg-destructive/10 text-destructive",
+};
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  national_id: "National ID", business_license: "Business License", tax_certificate: "Tax Certificate",
+  registration: "Registration", insurance: "Insurance", roadworthiness: "Roadworthiness",
+};
+
+function KycDocTable({ docs, type, onVerify, onReject }: {
+  docs: any[]; type: "user" | "vehicle";
+  onVerify: (doc: any) => void; onReject: (doc: any) => void;
+}) {
+  const pending = docs.filter(d => d.status === "pending");
+  const reviewed = docs.filter(d => d.status !== "pending");
+
+  const Row = ({ doc }: { doc: any }) => (
+    <tr className="border-b border-border hover:bg-muted/30">
+      <td className="p-3 text-sm font-medium text-foreground">
+        {type === "user"
+          ? (doc.profiles?.full_name || "—")
+          : (doc.vehicles?.vehicle_name || "—")}
+        <p className="text-xs text-muted-foreground font-normal">
+          {type === "user" ? doc.profiles?.phone : `${doc.vehicles?.plate_number} • ${doc.vehicles?.vehicle_type}`}
+        </p>
+      </td>
+      <td className="p-3 text-sm text-muted-foreground">{DOC_TYPE_LABELS[doc.doc_type] || doc.doc_type}</td>
+      <td className="p-3">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${KYC_STATUS_STYLE[doc.status]}`}>{doc.status}</span>
+        {doc.admin_note && <p className="text-xs text-muted-foreground mt-0.5">{doc.admin_note}</p>}
+      </td>
+      <td className="p-3 text-xs text-muted-foreground">{new Date(doc.uploaded_at).toLocaleDateString()}</td>
+      <td className="p-3">
+        <div className="flex items-center gap-1.5">
+          <a href={doc.doc_url} target="_blank" rel="noopener noreferrer"
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="View document">
+            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+          </a>
+          {doc.status !== "verified" && (
+            <button onClick={() => onVerify(doc)} title="Verify"
+              className="p-1.5 rounded-lg hover:bg-emerald/10 transition-colors">
+              <ShieldCheck className="w-4 h-4 text-emerald" />
+            </button>
+          )}
+          {doc.status !== "rejected" && (
+            <button onClick={() => onReject(doc)} title="Reject"
+              className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
+              <ShieldX className="w-4 h-4 text-destructive" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+
+  if (docs.length === 0) return (
+    <div className="bg-card border border-border rounded-xl p-10 text-center shadow-card">
+      <ShieldCheck className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+      <p className="text-muted-foreground text-sm">No documents to review.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {pending.length > 0 && (
+        <div className="bg-card border border-amber-200 rounded-xl overflow-hidden shadow-card">
+          <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-200">
+            <p className="text-sm font-medium text-amber-700">Pending Review ({pending.length})</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-border bg-muted/30">
+                <th className="text-left p-3 font-medium text-muted-foreground">{type === "user" ? "User" : "Vehicle"}</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Document</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Uploaded</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
+              </tr></thead>
+              <tbody>{pending.map(d => <Row key={d.id} doc={d} />)}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {reviewed.length > 0 && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-card">
+          <div className="px-4 py-2.5 bg-muted/50 border-b border-border">
+            <p className="text-sm font-medium text-muted-foreground">Reviewed ({reviewed.length})</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-border bg-muted/30">
+                <th className="text-left p-3 font-medium text-muted-foreground">{type === "user" ? "User" : "Vehicle"}</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Document</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Uploaded</th>
+                <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
+              </tr></thead>
+              <tbody>{reviewed.map(d => <Row key={d.id} doc={d} />)}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function EditUserModal({ user, onClose, onSaved }: { user: any; onClose: () => void; onSaved: () => void }) {
   const [fullName, setFullName] = useState(user.full_name || "");
@@ -86,8 +195,17 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
+  // KYC state
+  const [kycDocs, setKycDocs] = useState<any[]>([]);
+  const [vehicleKycDocs, setVehicleKycDocs] = useState<any[]>([]);
+  const [kycLoading, setKycLoading] = useState(false);
+  const [kycTab, setKycTab] = useState<"users" | "vehicles">("users");
+  const [noteModal, setNoteModal] = useState<{ doc: any; type: "user" | "vehicle" } | null>(null);
+  const [adminNote, setAdminNote] = useState("");
+
   const isUsersPage = window.location.pathname.includes("/users");
   const isOrdersPage = window.location.pathname.includes("/orders") && window.location.pathname.includes("/admin");
+  const isKycPage = window.location.pathname.includes("/kyc");
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
@@ -104,6 +222,19 @@ export default function AdminDashboard() {
   }, [users, userSearch, roleFilter, statusFilter]);
 
   useEffect(() => { fetchAll(); }, []);
+
+  const fetchKyc = async () => {
+    setKycLoading(true);
+    const [{ data: userDocs }, { data: vehDocs }] = await Promise.all([
+      supabase.from("kyc_documents" as any).select("*, profiles:user_id(full_name, phone)").order("uploaded_at", { ascending: false }),
+      supabase.from("vehicle_kyc_documents" as any).select("*, vehicles:vehicle_id(vehicle_name, plate_number, vehicle_type)").order("uploaded_at", { ascending: false }),
+    ]);
+    setKycDocs(userDocs || []);
+    setVehicleKycDocs(vehDocs || []);
+    setKycLoading(false);
+  };
+
+  useEffect(() => { if (isKycPage) fetchKyc(); }, [isKycPage]);
 
   const fetchAll = async () => {
     const [{ data: profiles }, { data: roles }, { data: allOrders }, { data: inv }] = await Promise.all([
@@ -149,6 +280,35 @@ export default function AdminDashboard() {
     if (error) { toast.error(error.message); return; }
     toast.success("User deleted");
     fetchAll();
+  };
+
+  const handleKycDoc = async (doc: any, type: "user" | "vehicle", status: "verified" | "rejected") => {
+    const table = type === "user" ? "kyc_documents" : "vehicle_kyc_documents";
+    const note = status === "rejected" ? adminNote : null;
+    const { error } = await supabase.from(table as any).update({ status, admin_note: note, reviewed_at: new Date().toISOString() }).eq("id", doc.id);
+    if (error) { toast.error(error.message); return; }
+
+    // After reviewing all docs for a user/vehicle, update their kyc_status
+    if (type === "user") {
+      const { data: allDocs } = await supabase.from("kyc_documents" as any).select("status").eq("user_id", doc.user_id);
+      const docs = allDocs || [];
+      const allVerified = docs.length > 0 && docs.every((d: any) => d.status === "verified");
+      const anyRejected = docs.some((d: any) => d.status === "rejected");
+      const newStatus = allVerified ? "verified" : anyRejected ? "rejected" : "pending";
+      await supabase.from("profiles").update({ kyc_status: newStatus, is_approved: allVerified }).eq("user_id", doc.user_id);
+    } else {
+      const { data: allDocs } = await supabase.from("vehicle_kyc_documents" as any).select("status").eq("vehicle_id", doc.vehicle_id);
+      const docs = allDocs || [];
+      const allVerified = docs.length > 0 && docs.every((d: any) => d.status === "verified");
+      const anyRejected = docs.some((d: any) => d.status === "rejected");
+      const newStatus = allVerified ? "verified" : anyRejected ? "rejected" : "pending";
+      await supabase.from("vehicles").update({ kyc_status: newStatus }).eq("id", doc.vehicle_id);
+    }
+
+    toast.success(`Document ${status}`);
+    setNoteModal(null);
+    setAdminNote("");
+    fetchKyc();
   };
 
   // --- Chart Data ---
@@ -289,6 +449,58 @@ export default function AdminDashboard() {
             </div>
           </div>
           {editingUser && <EditUserModal user={editingUser} onClose={() => setEditingUser(null)} onSaved={fetchAll} />}
+        </div>
+      ) : isKycPage ? (
+        <div className="space-y-4">
+          {/* Reject note modal */}
+          {noteModal && (
+            <div className="fixed inset-0 bg-foreground/40 z-50 flex items-center justify-center p-4" onClick={() => setNoteModal(null)}>
+              <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-elevated" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-display font-semibold text-foreground">Rejection Note</h3>
+                  <button onClick={() => setNoteModal(null)}><X className="w-5 h-5 text-muted-foreground" /></button>
+                </div>
+                <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)} placeholder="Reason for rejection (optional)"
+                  className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none resize-none h-24 mb-3" />
+                <button onClick={() => handleKycDoc(noteModal.doc, noteModal.type, "rejected")}
+                  className="w-full bg-destructive text-destructive-foreground py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <h2 className="font-display font-semibold text-lg text-foreground">KYC Review</h2>
+            <div className="flex gap-2">
+              <button onClick={() => setKycTab("users")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${kycTab === "users" ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                User Docs
+              </button>
+              <button onClick={() => setKycTab("vehicles")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${kycTab === "vehicles" ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                Vehicle Docs
+              </button>
+            </div>
+          </div>
+
+          {kycLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-emerald" /></div>
+          ) : kycTab === "users" ? (
+            <KycDocTable
+              docs={kycDocs}
+              type="user"
+              onVerify={doc => handleKycDoc(doc, "user", "verified")}
+              onReject={doc => { setNoteModal({ doc, type: "user" }); setAdminNote(""); }}
+            />
+          ) : (
+            <KycDocTable
+              docs={vehicleKycDocs}
+              type="vehicle"
+              onVerify={doc => handleKycDoc(doc, "vehicle", "verified")}
+              onReject={doc => { setNoteModal({ doc, type: "vehicle" }); setAdminNote(""); }}
+            />
+          )}
         </div>
       ) : isOrdersPage ? (
         <div className="space-y-4">
